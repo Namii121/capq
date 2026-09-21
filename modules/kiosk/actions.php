@@ -9,21 +9,23 @@ require_once __DIR__ . '/../../config/db.php';
 
 $action = $_REQUEST['action'] ?? '';
 
-switch ($action) {
-    case 'checkin':
-        kioskCheckin();
-        break;
+if (!empty($action)) {
+    switch ($action) {
+        case 'checkin':
+            kioskCheckin();
+            break;
 
-    case 'checkin_appointment':
-        kioskCheckinAppointment();
-        break;
+        case 'checkin_appointment':
+            kioskCheckinAppointment();
+            break;
 
-    case 'get_rooms':
-        getRooms();
-        break;
+        case 'get_rooms':
+            getRooms();
+            break;
 
-    default:
-        jsonResponse(false, null, 'Invalid kiosk action requested', 400);
+        default:
+            jsonResponse(false, null, 'Invalid kiosk action requested', 400);
+    }
 }
 
 /**
@@ -34,43 +36,13 @@ function kioskCheckin() {
 
     $name       = sanitizeInput($_POST['name'] ?? 'Walk-in Patient');
     $phone      = sanitizeInput($_POST['phone'] ?? '09XX-XXX-XXXX');
-    $dept       = sanitizeInput($_POST['department'] ?? 'General Medicine');
+    $dept       = 'General Consultation';
     $isPriority = !empty($_POST['is_priority']) ? 1 : 0;
     $complaint  = sanitizeInput($_POST['complaint'] ?? 'Self Check-In Consultation');
 
-    // Prefix selection and default room assignment
-    $prefix = 'A';
-    $roomAssigned = 'Room 03';
+    $prefix = 'W';
+    $roomAssigned = 'Consultation Room';
     $doctorName = 'Dr. Sarah Santos, MD';
-
-    if (stripos($dept, 'Pedia') !== false) {
-        $prefix = 'P';
-        $roomAssigned = 'Room 02';
-        $doctorName = 'Dr. Patricia Lim, MD';
-    } else if (stripos($dept, 'Dental') !== false) {
-        $prefix = 'D';
-        $roomAssigned = 'Room 04';
-        $doctorName = 'Dr. Michael Tan, DMD';
-    } else if (stripos($dept, 'Triage') !== false) {
-        $prefix = 'T';
-        $roomAssigned = 'Room 01';
-        $doctorName = 'Nurse Station 1';
-    } else if (stripos($dept, 'Pharm') !== false || stripos($dept, 'Bill') !== false) {
-        $prefix = 'B';
-        $roomAssigned = 'Room 05';
-        $doctorName = 'Prescription Counter';
-    }
-
-    // Check registered doctors in users table for matching department
-    $docStmt = $pdo->prepare("SELECT full_name, room_number FROM users WHERE role = 'DOCTOR' AND department LIKE ? LIMIT 1");
-    $docStmt->execute(["%$dept%"]);
-    $regDoc = $docStmt->fetch();
-    if ($regDoc) {
-        $doctorName = $regDoc['full_name'];
-        if ($regDoc['room_number']) {
-            $roomAssigned = "Room " . sprintf('%02d', intval($regDoc['room_number']));
-        }
-    }
 
     // Generate unique ticket number
     $stmt = $pdo->prepare("SELECT ticket_number FROM queue_tickets WHERE ticket_number LIKE ? ORDER BY id DESC LIMIT 1");
@@ -100,9 +72,9 @@ function kioskCheckin() {
         ':priority'  => $isPriority
     ]);
 
-    // Calculate patients ahead for this department
-    $aheadStmt = $pdo->prepare("SELECT COUNT(*) FROM queue_tickets WHERE status = 'WAITING' AND (department = ? OR room_assigned = ?) AND id < (SELECT id FROM queue_tickets WHERE ticket_number = ?)");
-    $aheadStmt->execute([$dept, $roomAssigned, $ticketNumber]);
+    // Calculate patients ahead
+    $aheadStmt = $pdo->prepare("SELECT COUNT(*) FROM queue_tickets WHERE status = 'WAITING' AND id < (SELECT id FROM queue_tickets WHERE ticket_number = ?)");
+    $aheadStmt->execute([$ticketNumber]);
     $ahead = (int)$aheadStmt->fetchColumn();
     $estWaitMins = $ahead * 8;
 
@@ -158,8 +130,8 @@ function kioskCheckinAppointment() {
             'ticket_number'   => $ticket['ticket_number'],
             'patient_name'    => $ticket['patient_name'],
             'department'      => $ticket['department'],
-            'doctor_name'     => $ticket['doctor_name'] ?: 'Attending Physician',
-            'room_assigned'   => $ticket['room_assigned'] ?: 'Room 03',
+            'doctor_name'     => $ticket['doctor_name'] ?: 'Dr. Sarah Santos, MD',
+            'room_assigned'   => $ticket['room_assigned'] ?: 'Consultation Room',
             'time_slot'       => $ticket['time_slot'] ?: 'Active',
             'patients_ahead'  => 0,
             'est_wait_min'    => 0,
@@ -186,8 +158,8 @@ function kioskCheckinAppointment() {
         'ticket_number'   => $ticket['ticket_number'],
         'patient_name'    => $ticket['patient_name'],
         'department'      => $ticket['department'],
-        'doctor_name'     => $ticket['doctor_name'] ?: 'Attending Physician',
-        'room_assigned'   => $ticket['room_assigned'] ?: 'Room 03',
+        'doctor_name'     => $ticket['doctor_name'] ?: 'Dr. Sarah Santos, MD',
+        'room_assigned'   => $ticket['room_assigned'] ?: 'Consultation Room',
         'time_slot'       => $ticket['time_slot'] ?: 'Checked-in',
         'patients_ahead'  => $ahead,
         'est_wait_min'    => $estWaitMins,
@@ -199,9 +171,15 @@ function kioskCheckinAppointment() {
  * Get active clinic rooms for kiosk display
  */
 function getRooms() {
-    $pdo = getDBConnection();
-    $stmt = $pdo->query("SELECT * FROM clinic_rooms ORDER BY room_number ASC");
-    $rooms = $stmt->fetchAll();
-
-    jsonResponse(true, $rooms, 'Clinic rooms retrieved');
+    $rooms = [
+        [
+            'id'          => 1,
+            'room_number' => '01',
+            'room_name'   => 'Consultation Room',
+            'doctor_name' => 'Dr. Sarah Santos, MD',
+            'department'  => 'General Consultation',
+            'status'      => 'AVAILABLE'
+        ]
+    ];
+    jsonResponse(true, $rooms, 'Clinic room retrieved');
 }

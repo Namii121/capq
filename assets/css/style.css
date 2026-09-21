@@ -1,9 +1,22 @@
 /* ==========================================================================
    CarePoint CAPQ - Global Core Design & Anti-FOUC Stylesheet
+   Prevents unstyled content flashes and styling conflicts on first load/reload
    ========================================================================== */
 
 /* Google Fonts Import Fallback */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap');
+
+:root {
+  --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --color-brand-50: #f0fdfa;
+  --color-brand-100: #ccfbf1;
+  --color-brand-500: #14b8a6;
+  --color-brand-600: #0d9488;
+  --color-brand-700: #0f766e;
+  --color-brand-800: #115e59;
+  --color-brand-900: #134e4a;
+}
 
 /* Base Reset & Core Properties */
 *, ::before, ::after {
@@ -14,7 +27,7 @@
 }
 
 html {
-  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-sans);
   line-height: 1.5;
   -webkit-text-size-adjust: 100%;
   tab-size: 4;
@@ -24,7 +37,7 @@ html {
 }
 
 body {
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: var(--font-sans);
   line-height: inherit;
   min-height: 100vh;
   text-rendering: optimizeLegibility;
@@ -32,9 +45,14 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Anti-FOUC Display Utilities */
+.hidden {
+  display: none !important;
+}
+
 /* Monospace font utility */
-.font-mono, font-mono {
-  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+.font-mono {
+  font-family: var(--font-mono) !important;
 }
 
 /* Touch action optimization for kiosk buttons */
@@ -59,7 +77,7 @@ button {
   background: rgba(20, 184, 166, 0.7);
 }
 
-/* Animations */
+/* High-Impact Animations */
 @keyframes pulse-call {
   0%, 100% { transform: scale(1); box-shadow: 0 0 35px rgba(20, 184, 166, 0.25); }
   50% { transform: scale(1.015); box-shadow: 0 0 60px rgba(20, 184, 166, 0.45); }

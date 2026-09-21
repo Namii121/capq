@@ -12,45 +12,55 @@ require_once __DIR__ . '/../../config/db.php';
 
 $action = $_REQUEST['action'] ?? '';
 
-switch ($action) {
-    case 'login':
-        doctorLogin();
-        break;
+if (!empty($action)) {
+    switch ($action) {
+        case 'login':
+            doctorLogin();
+            break;
 
-    case 'logout':
-        doctorLogout();
-        break;
+        case 'logout':
+            doctorLogout();
+            break;
 
-    case 'get_session':
-        getDoctorSession();
-        break;
+        case 'get_session':
+            getDoctorSession();
+            break;
 
-    case 'get_state':
-        getDoctorState();
-        break;
+        case 'get_state':
+            getDoctorState();
+            break;
 
-    case 'call_next':
-        callNextPatient();
-        break;
+        case 'prepare_next':
+            prepareNextPatient();
+            break;
 
-    case 'call_patient':
-        callSpecificPatient();
-        break;
+        case 'prepare_patient':
+            prepareSpecificPatient();
+            break;
 
-    case 'save_consultation':
-        saveConsultation();
-        break;
+        case 'call_next':
+            callNextPatient();
+            break;
 
-    case 'complete_consultation':
-        completeConsultation();
-        break;
+        case 'call_patient':
+            callSpecificPatient();
+            break;
 
-    case 'skip_patient':
-        skipPatient();
-        break;
+        case 'save_consultation':
+            saveConsultation();
+            break;
 
-    default:
-        jsonResponse(false, null, 'Invalid doctor action requested', 400);
+        case 'complete_consultation':
+            completeConsultation();
+            break;
+
+        case 'skip_patient':
+            skipPatient();
+            break;
+
+        default:
+            jsonResponse(false, null, 'Invalid doctor action requested', 400);
+    }
 }
 
 /**
@@ -162,11 +172,11 @@ function getActiveDoctor() {
         return $_SESSION['doctor'];
     }
     return [
-        'id'          => 0,
-        'username'    => 'santos.md',
+        'id'          => 1,
+        'username'    => 'admin',
         'full_name'   => 'Dr. Sarah Santos, MD',
-        'department'  => 'General Medicine',
-        'room_number' => '03'
+        'department'  => 'General Consultation',
+        'room_number' => '01'
     ];
 }
 
@@ -176,25 +186,23 @@ function getActiveDoctor() {
 function getDoctorState() {
     $pdo = getDBConnection();
     $doc = getActiveDoctor();
-    $roomTitle = "Room " . sprintf('%02d', intval($doc['room_number'] ?: 3));
 
-    // Current patient in consultation for this doctor's room
-    $stmt = $pdo->prepare("SELECT * FROM queue_tickets WHERE status = 'CALLING' AND (room_assigned = ? OR room_assigned IS NULL) ORDER BY called_at DESC LIMIT 1");
-    $stmt->execute([$roomTitle]);
+    // Current patient in consultation
+    $stmt = $pdo->query("SELECT * FROM queue_tickets WHERE status = 'CALLING' ORDER BY called_at DESC LIMIT 1");
     $nowCalling = $stmt->fetch();
 
-    if ($nowCalling) {
-        $nowCalling['vitals'] = [
-            'bp'     => $nowCalling['vitals_bp'] ?? '120/80',
-            'temp'   => $nowCalling['vitals_temp'] ?? '36.8',
-            'pulse'  => $nowCalling['vitals_pulse'] ?? '76',
-            'spo2'   => $nowCalling['vitals_spo2'] ?? '99',
-            'weight' => $nowCalling['vitals_weight'] ?? '65'
-        ];
+
+
+    // Patient currently preparing (On Deck)
+    $prepStmt = $pdo->query("SELECT * FROM queue_tickets WHERE status = 'PREPARING' ORDER BY id ASC LIMIT 1");
+    $nowPreparing = $prepStmt->fetch() ?: null;
+    if ($nowPreparing) {
+        $nowPreparing['ticket'] = $nowPreparing['ticket_number'];
+        $nowPreparing['name'] = $nowPreparing['patient_name'];
     }
 
-    // Upcoming queue list matching department or all waiting
-    $stmt = $pdo->query("SELECT * FROM queue_tickets WHERE status = 'WAITING' ORDER BY is_priority DESC, created_at ASC");
+    // Upcoming queue list (includes WAITING and PREPARING)
+    $stmt = $pdo->query("SELECT * FROM queue_tickets WHERE status IN ('WAITING', 'PREPARING') ORDER BY FIELD(status, 'PREPARING', 'WAITING'), is_priority DESC, created_at ASC");
     $upcomingRaw = $stmt->fetchAll();
 
     $upcomingQueue = [];
@@ -204,27 +212,81 @@ function getDoctorState() {
         $item['patientId'] = $item['patient_id'];
         $item['time'] = $item['time_slot'];
         $item['isPriority'] = (bool)$item['is_priority'];
-        $item['vitals'] = [
-            'bp'     => $item['vitals_bp'] ?? '120/80',
-            'temp'   => $item['vitals_temp'] ?? '36.8',
-            'pulse'  => $item['vitals_pulse'] ?? '76',
-            'spo2'   => $item['vitals_spo2'] ?? '99',
-            'weight' => $item['vitals_weight'] ?? '65'
-        ];
+        $item['isPreparing'] = ($item['status'] === 'PREPARING');
         $upcomingQueue[] = $item;
     }
 
-    // Completed count for active doctor's room today
-    $compStmt = $pdo->prepare("SELECT COUNT(*) FROM queue_tickets WHERE status = 'COMPLETED' AND (room_assigned = ? OR doctor_name = ?)");
-    $compStmt->execute([$roomTitle, $doc['full_name']]);
+    // Completed count for today
+    $compStmt = $pdo->query("SELECT COUNT(*) FROM queue_tickets WHERE status = 'COMPLETED'");
     $completedToday = (int)$compStmt->fetchColumn();
 
     jsonResponse(true, [
         'activeDoctor'   => $doc,
         'nowCalling'     => $nowCalling,
+        'nowPreparing'   => $nowPreparing,
         'upcomingQueue'  => $upcomingQueue,
         'completedCount' => $completedToday
     ], 'Doctor state retrieved');
+}
+
+/**
+ * Mark next waiting patient as PREPARING (On Deck / Standby)
+ */
+function prepareNextPatient() {
+    $pdo = getDBConnection();
+    $doc = getActiveDoctor();
+    $docName = $doc['full_name'];
+    $roomTitle = "Consultation Room";
+
+    // Fetch next waiting patient (priority first, not yet preparing/calling)
+    $stmt = $pdo->query("SELECT * FROM queue_tickets WHERE status = 'WAITING' ORDER BY is_priority DESC, created_at ASC LIMIT 1");
+    $nextPatient = $stmt->fetch();
+
+    if (!$nextPatient) {
+        jsonResponse(false, null, 'No waiting patients in queue to prepare', 404);
+        return;
+    }
+
+    $updateStmt = $pdo->prepare("UPDATE queue_tickets SET status = 'PREPARING', room_assigned = ?, doctor_name = ? WHERE id = ?");
+    $updateStmt->execute([$roomTitle, $docName, $nextPatient['id']]);
+
+    $logStmt = $pdo->prepare("INSERT INTO system_logs (event_type, ticket_number, details) VALUES ('PREPARE_NEXT', ?, ?)");
+    $logStmt->execute([$nextPatient['ticket_number'], "$docName marked patient to prepare for $roomTitle"]);
+
+    $nextPatient['status'] = 'PREPARING';
+    $nextPatient['ticket'] = $nextPatient['ticket_number'];
+    jsonResponse(true, $nextPatient, "Patient {$nextPatient['ticket_number']} set to Prepare / Standby");
+}
+
+/**
+ * Mark a specific ticket as PREPARING
+ */
+function prepareSpecificPatient() {
+    $pdo = getDBConnection();
+    $doc = getActiveDoctor();
+    $roomTitle = "Consultation Room";
+    $docName = $doc['full_name'];
+
+    $ticket = sanitizeInput($_REQUEST['ticket'] ?? '');
+
+    if (empty($ticket)) {
+        jsonResponse(false, null, 'Ticket parameter required', 400);
+    }
+
+    $stmt = $pdo->prepare("SELECT * FROM queue_tickets WHERE ticket_number = ?");
+    $stmt->execute([$ticket]);
+    $patient = $stmt->fetch();
+
+    if (!$patient) {
+        jsonResponse(false, null, "Ticket $ticket not found", 404);
+    }
+
+    $updateStmt = $pdo->prepare("UPDATE queue_tickets SET status = 'PREPARING', room_assigned = ?, doctor_name = ? WHERE id = ?");
+    $updateStmt->execute([$roomTitle, $docName, $patient['id']]);
+
+    $patient['status'] = 'PREPARING';
+    $patient['ticket'] = $patient['ticket_number'];
+    jsonResponse(true, $patient, "Ticket $ticket set to Preparing / Standby");
 }
 
 /**
@@ -233,38 +295,25 @@ function getDoctorState() {
 function callNextPatient() {
     $pdo = getDBConnection();
     $doc = getActiveDoctor();
-    $roomNum = sprintf('%02d', intval($doc['room_number'] ?: 3));
-    $roomTitle = "Room " . $roomNum;
     $docName = $doc['full_name'];
+    $roomNum = sprintf('%02d', intval($doc['room_number'] ?: 1));
+    $roomTitle = "Consultation Room";
 
-    // 1. Fetch next waiting patient (matching doctor's department or room first, priority first)
-    $dept = $doc['department'] ?? 'General Medicine';
-    $stmt = $pdo->prepare("SELECT * FROM queue_tickets WHERE status = 'WAITING' AND (department = ? OR room_assigned = ?) ORDER BY is_priority DESC, created_at ASC LIMIT 1");
-    $stmt->execute([$dept, $roomTitle]);
+    // Fetch next patient (PREPARING on deck first, then WAITING priority first)
+    $stmt = $pdo->query("SELECT * FROM queue_tickets WHERE status IN ('PREPARING', 'WAITING') ORDER BY FIELD(status, 'PREPARING', 'WAITING'), is_priority DESC, created_at ASC LIMIT 1");
     $nextPatient = $stmt->fetch();
-
-    if (!$nextPatient) {
-        // Fallback to any waiting patient across all departments
-        $stmt = $pdo->query("SELECT * FROM queue_tickets WHERE status = 'WAITING' ORDER BY is_priority DESC, created_at ASC LIMIT 1");
-        $nextPatient = $stmt->fetch();
-    }
 
     if (!$nextPatient) {
         jsonResponse(false, null, 'No waiting patients in queue', 404);
         return;
     }
 
-    // Auto-complete any active ticket currently in consultation for this doctor's room
-    $autoComp = $pdo->prepare("UPDATE queue_tickets SET status = 'COMPLETED', completed_at = NOW() WHERE status = 'CALLING' AND (room_assigned = ? OR doctor_name = ?)");
-    $autoComp->execute([$roomTitle, $docName]);
+    // Auto-complete any active ticket currently in consultation
+    $pdo->query("UPDATE queue_tickets SET status = 'COMPLETED', completed_at = NOW() WHERE status = 'CALLING'");
 
     // 2. Update status to CALLING
     $updateStmt = $pdo->prepare("UPDATE queue_tickets SET status = 'CALLING', room_assigned = ?, doctor_name = ?, called_at = NOW() WHERE id = ?");
     $updateStmt->execute([$roomTitle, $docName, $nextPatient['id']]);
-
-    // 3. Update room in clinic_rooms
-    $roomStmt = $pdo->prepare("UPDATE clinic_rooms SET doctor_name = ?, department = ?, current_ticket = ?, status = 'BUSY' WHERE room_number = ?");
-    $roomStmt->execute([$docName, $doc['department'], $nextPatient['ticket_number'], $roomNum]);
 
     // Log call event
     $logStmt = $pdo->prepare("INSERT INTO system_logs (event_type, ticket_number, details) VALUES ('CALL_NEXT', ?, ?)");
@@ -275,13 +324,7 @@ function callNextPatient() {
     $stmt->execute([$nextPatient['id']]);
     $calling = $stmt->fetch();
 
-    $calling['vitals'] = [
-        'bp'     => $calling['vitals_bp'] ?? '120/80',
-        'temp'   => $calling['vitals_temp'] ?? '36.8',
-        'pulse'  => $calling['vitals_pulse'] ?? '76',
-        'spo2'   => $calling['vitals_spo2'] ?? '99',
-        'weight' => $calling['vitals_weight'] ?? '65'
-    ];
+
 
     jsonResponse(true, $calling, "Patient {$calling['ticket_number']} called to $roomTitle");
 }
@@ -292,8 +335,8 @@ function callNextPatient() {
 function callSpecificPatient() {
     $pdo = getDBConnection();
     $doc = getActiveDoctor();
-    $roomNum = sprintf('%02d', intval($doc['room_number'] ?: 3));
-    $roomTitle = "Room " . $roomNum;
+    $roomNum = sprintf('%02d', intval($doc['room_number'] ?: 1));
+    $roomTitle = "Consultation Room";
     $docName = $doc['full_name'];
 
     $ticket = sanitizeInput($_REQUEST['ticket'] ?? '');
@@ -317,9 +360,6 @@ function callSpecificPatient() {
     $updateStmt = $pdo->prepare("UPDATE queue_tickets SET status = 'CALLING', room_assigned = ?, doctor_name = ?, called_at = NOW() WHERE id = ?");
     $updateStmt->execute([$roomTitle, $docName, $patient['id']]);
 
-    $roomStmt = $pdo->prepare("UPDATE clinic_rooms SET doctor_name = ?, department = ?, current_ticket = ?, status = 'BUSY' WHERE room_number = ?");
-    $roomStmt->execute([$docName, $doc['department'], $patient['ticket_number'], $roomNum]);
-
     jsonResponse(true, $patient, "Ticket $ticket called to $roomTitle");
 }
 
@@ -333,9 +373,6 @@ function saveConsultation() {
     $ticketNum    = sanitizeInput($_POST['ticket_number'] ?? '');
     $diagnosis    = sanitizeInput($_POST['diagnosis'] ?? '');
     $prescription = sanitizeInput($_POST['prescription'] ?? '');
-    $bp           = sanitizeInput($_POST['vitals_bp'] ?? '120/80');
-    $temp         = sanitizeInput($_POST['vitals_temp'] ?? '36.8');
-    $pulse        = sanitizeInput($_POST['vitals_pulse'] ?? '76');
 
     if (!$ticketId && !$ticketNum) {
         jsonResponse(false, null, 'Ticket ID or number required to save consultation', 400);
@@ -343,19 +380,13 @@ function saveConsultation() {
 
     $sql = "UPDATE queue_tickets SET 
             diagnosis = :diag, 
-            prescription = :rx, 
-            vitals_bp = :bp, 
-            vitals_temp = :temp, 
-            vitals_pulse = :pulse 
+            prescription = :rx 
             WHERE id = :id OR ticket_number = :num";
 
     $stmt = $pdo->prepare($sql);
     $stmt->execute([
         ':diag' => $diagnosis,
         ':rx'   => $prescription,
-        ':bp'   => $bp,
-        ':temp' => $temp,
-        ':pulse'=> $pulse,
         ':id'   => $ticketId,
         ':num'  => $ticketNum
     ]);
@@ -369,29 +400,33 @@ function saveConsultation() {
 function completeConsultation() {
     $pdo = getDBConnection();
     $doc = getActiveDoctor();
-    $roomNum = sprintf('%02d', intval($doc['room_number'] ?: 3));
-    $roomTitle = "Room " . $roomNum;
+    $roomTitle = "Consultation Room";
 
-    $ticketNum = sanitizeInput($_REQUEST['ticket_number'] ?? '');
+    $ticketNum    = sanitizeInput($_REQUEST['ticket_number'] ?? '');
+    $diagnosis    = sanitizeInput($_POST['diagnosis'] ?? '');
+    $prescription = sanitizeInput($_POST['prescription'] ?? '');
 
     if (empty($ticketNum)) {
-        // Grab current calling patient for this room/doctor
-        $stmt = $pdo->prepare("SELECT ticket_number FROM queue_tickets WHERE status = 'CALLING' AND (room_assigned = ? OR doctor_name = ?) ORDER BY called_at DESC LIMIT 1");
-        $stmt->execute([$roomTitle, $doc['full_name']]);
+        $stmt = $pdo->query("SELECT ticket_number FROM queue_tickets WHERE status = 'CALLING' ORDER BY called_at DESC LIMIT 1");
         $ticketNum = $stmt->fetchColumn();
-
-        if (empty($ticketNum)) {
-            $stmt = $pdo->query("SELECT ticket_number FROM queue_tickets WHERE status = 'CALLING' ORDER BY called_at DESC LIMIT 1");
-            $ticketNum = $stmt->fetchColumn();
-        }
     }
 
     if ($ticketNum) {
-        $stmt = $pdo->prepare("UPDATE queue_tickets SET status = 'COMPLETED', completed_at = NOW() WHERE ticket_number = ?");
-        $stmt->execute([$ticketNum]);
+        $sql = "UPDATE queue_tickets SET status = 'COMPLETED', completed_at = NOW()";
+        $params = [];
+        if (!empty($diagnosis)) {
+            $sql .= ", diagnosis = ?";
+            $params[] = $diagnosis;
+        }
+        if (!empty($prescription)) {
+            $sql .= ", prescription = ?";
+            $params[] = $prescription;
+        }
+        $sql .= " WHERE ticket_number = ?";
+        $params[] = $ticketNum;
 
-        $roomStmt = $pdo->prepare("UPDATE clinic_rooms SET current_ticket = '---', status = 'AVAILABLE' WHERE room_number = ?");
-        $roomStmt->execute([$roomNum]);
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
 
         $logStmt = $pdo->prepare("INSERT INTO system_logs (event_type, ticket_number, details) VALUES ('COMPLETE', ?, ?)");
         $logStmt->execute([$ticketNum, "Consultation completed by {$doc['full_name']} in $roomTitle"]);
@@ -408,8 +443,7 @@ function completeConsultation() {
 function skipPatient() {
     $pdo = getDBConnection();
     $doc = getActiveDoctor();
-    $roomNum = sprintf('%02d', intval($doc['room_number'] ?: 3));
-    $roomTitle = "Room " . $roomNum;
+    $roomTitle = "Consultation Room";
 
     $ticketNum = sanitizeInput($_REQUEST['ticket_number'] ?? '');
 
@@ -427,9 +461,6 @@ function skipPatient() {
     if ($ticketNum) {
         $stmt = $pdo->prepare("UPDATE queue_tickets SET status = 'CANCELLED' WHERE ticket_number = ?");
         $stmt->execute([$ticketNum]);
-
-        $roomStmt = $pdo->prepare("UPDATE clinic_rooms SET current_ticket = '---', status = 'AVAILABLE' WHERE room_number = ?");
-        $roomStmt->execute([$roomNum]);
 
         $logStmt = $pdo->prepare("INSERT INTO system_logs (event_type, ticket_number, details) VALUES ('SKIPPED', ?, ?)");
         $logStmt->execute([$ticketNum, "Patient skipped by {$doc['full_name']} in $roomTitle"]);

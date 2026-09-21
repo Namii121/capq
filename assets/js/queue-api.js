@@ -10,6 +10,20 @@ let cachedQueueState = {
   upcomingQueue: []
 };
 
+// Helper function to resolve module API URLs regardless of root or subdirectory route
+function getApiEndpoint(moduleName, action, params = '') {
+  const path = window.location.pathname;
+  let prefix = '';
+  if (path.includes('/modules/')) {
+    prefix = '../../';
+  }
+  let url = `${prefix}modules/${moduleName}/actions.php?action=${action}`;
+  if (params) {
+    url += `&${params}`;
+  }
+  return url;
+}
+
 const QueueManager = {
   // Get active cached state
   getState() {
@@ -54,7 +68,7 @@ const QueueManager = {
   // Fetch live queue state from display module action
   async syncFromBackend() {
     try {
-      const res = await fetch('modules/display/actions.php?action=get_live_state');
+      const res = await fetch(getApiEndpoint('display', 'get_live_state'));
       const json = await res.json();
       if (json.success && json.data) {
         cachedQueueState = json.data;
@@ -65,10 +79,40 @@ const QueueManager = {
     }
   },
 
+  // Prepare next patient via Doctor module action
+  async prepareNext() {
+    try {
+      const res = await fetch(getApiEndpoint('doctor', 'prepare_next'), { method: 'POST' });
+      const json = await res.json();
+      if (json.success && json.data) {
+        await this.syncFromBackend();
+        return json.data;
+      } else if (json.message) {
+        console.warn('Prepare next notice:', json.message);
+      }
+    } catch (err) {
+      console.error('Prepare next patient error:', err);
+    }
+  },
+
+  // Prepare specific patient
+  async preparePatient(ticketNumber) {
+    try {
+      const res = await fetch(getApiEndpoint('doctor', 'prepare_patient', `ticket=${encodeURIComponent(ticketNumber)}`), { method: 'POST' });
+      const json = await res.json();
+      if (json.success) {
+        await this.syncFromBackend();
+        return json.data;
+      }
+    } catch (err) {
+      console.error('Prepare patient error:', err);
+    }
+  },
+
   // Call next patient via Doctor module action
   async callNext() {
     try {
-      const res = await fetch('modules/doctor/actions.php?action=call_next', { method: 'POST' });
+      const res = await fetch(getApiEndpoint('doctor', 'call_next'), { method: 'POST' });
       const json = await res.json();
       if (json.success && json.data) {
         cachedQueueState.nowCalling = json.data;
@@ -84,7 +128,7 @@ const QueueManager = {
   // Call specific patient
   async callPatient(ticketNumber) {
     try {
-      const res = await fetch(`modules/doctor/actions.php?action=call_patient&ticket=${encodeURIComponent(ticketNumber)}`, { method: 'POST' });
+      const res = await fetch(getApiEndpoint('doctor', 'call_patient', `ticket=${encodeURIComponent(ticketNumber)}`), { method: 'POST' });
       const json = await res.json();
       if (json.success) {
         this.playChime();
@@ -106,7 +150,7 @@ const QueueManager = {
       formData.append('complaint', patient.reason || patient.complaint || 'General Consultation');
       if (patient.isPriority) formData.append('is_priority', '1');
 
-      const res = await fetch('modules/kiosk/actions.php?action=checkin', {
+      const res = await fetch(getApiEndpoint('kiosk', 'checkin'), {
         method: 'POST',
         body: formData
       });
@@ -123,7 +167,7 @@ const QueueManager = {
   // Reset demo state via Admin module action
   async resetDefaults() {
     try {
-      await fetch('modules/admin/actions.php?action=reset_queue', { method: 'POST' });
+      await fetch(getApiEndpoint('admin', 'reset_queue'), { method: 'POST' });
       await this.syncFromBackend();
     } catch (err) {
       console.error('Reset queue error:', err);

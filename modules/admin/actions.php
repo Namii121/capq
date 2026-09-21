@@ -17,61 +17,95 @@ if (empty($action) && isset($argv[1])) {
     $action = $cliArgs['action'] ?? $argv[1];
 }
 
-switch ($action) {
-    case 'login':
-        adminLogin();
-        break;
+if (!empty($action)) {
+    switch ($action) {
+        case 'login':
+            adminLogin();
+            break;
 
-    case 'logout':
-        adminLogout();
-        break;
+        case 'logout':
+            adminLogout();
+            break;
 
-    case 'get_session':
-        getAdminSession();
-        break;
+        case 'get_session':
+            getAdminSession();
+            break;
 
-    case 'get_dashboard':
-        getDashboardData();
-        break;
+        case 'get_dashboard':
+            getDashboardData();
+            break;
 
-    case 'list_patients':
-        listPatients();
-        break;
+        case 'list_patients':
+            listPatients();
+            break;
 
-    case 'update_priority':
-        updatePriority();
-        break;
+        case 'update_priority':
+            updatePriority();
+            break;
 
-    case 'assign_room':
-        assignRoom();
-        break;
+        case 'assign_room':
+            assignRoom();
+            break;
 
-    case 'update_status':
-        updateStatus();
-        break;
+        case 'update_status':
+            updateStatus();
+            break;
 
-    case 'reset_queue':
-        resetQueue();
-        break;
+        case 'reset_queue':
+            resetQueue();
+            break;
 
-    case 'list_doctors':
-        listDoctors();
-        break;
+        case 'list_doctors':
+            listDoctors();
+            break;
 
-    case 'add_doctor':
-        addDoctor();
-        break;
+        case 'add_doctor':
+            addDoctor();
+            break;
 
-    case 'update_doctor':
-        updateDoctor();
-        break;
+        case 'update_doctor':
+            updateDoctor();
+            break;
 
-    case 'delete_doctor':
-        deleteDoctor();
-        break;
+        case 'delete_doctor':
+            deleteDoctor();
+            break;
 
-    default:
-        jsonResponse(false, null, 'Invalid admin action requested', 400);
+        case 'list_rooms':
+            listRooms();
+            break;
+
+        case 'add_room':
+            addRoom();
+            break;
+
+        case 'update_room':
+            updateRoom();
+            break;
+
+        case 'delete_room':
+            deleteRoom();
+            break;
+
+        case 'list_departments':
+            listDepartments();
+            break;
+
+        case 'add_department':
+            addDepartment();
+            break;
+
+        case 'update_department':
+            updateDepartment();
+            break;
+
+        case 'delete_department':
+            deleteDepartment();
+            break;
+
+        default:
+            jsonResponse(false, null, 'Invalid admin action requested', 400);
+    }
 }
 
 /**
@@ -93,8 +127,18 @@ function getDashboardData() {
         $completedCount = $pdo->query("SELECT COUNT(*) FROM queue_tickets WHERE status = 'COMPLETED'")->fetchColumn();
     }
 
-    // Rooms
-    $rooms = $pdo->query("SELECT * FROM clinic_rooms ORDER BY room_number ASC")->fetchAll();
+    // Single Doctor Solo Clinic Room
+    $rooms = [
+        [
+            'id'             => 1,
+            'room_number'    => '01',
+            'room_name'      => 'Consultation Room',
+            'doctor_name'    => 'Dr. Sarah Santos, MD',
+            'department'     => 'General Consultation',
+            'status'         => ($nowServing > 0) ? 'BUSY' : 'AVAILABLE',
+            'current_ticket' => '---'
+        ]
+    ];
 
     // All patient tickets
     $patients = $pdo->query("SELECT * FROM queue_tickets ORDER BY is_priority DESC, id DESC LIMIT 50")->fetchAll();
@@ -172,8 +216,8 @@ function assignRoom() {
     $pdo = getDBConnection();
 
     $ticket = sanitizeInput($_POST['ticket_number'] ?? '');
-    $room   = sanitizeInput($_POST['room_assigned'] ?? 'Room 03');
-    $doctor = sanitizeInput($_POST['doctor_name'] ?? 'Dr. Sarah Santos, MD');
+    $room   = 'Consultation Room';
+    $doctor = 'Dr. Sarah Santos, MD';
 
     if (empty($ticket)) {
         jsonResponse(false, null, 'Ticket number required', 400);
@@ -182,11 +226,7 @@ function assignRoom() {
     $stmt = $pdo->prepare("UPDATE queue_tickets SET room_assigned = ?, doctor_name = ?, status = 'CALLING', called_at = NOW() WHERE ticket_number = ?");
     $stmt->execute([$room, $doctor, $ticket]);
 
-    $roomNum = sprintf('%02d', intval(preg_replace('/[^0-9]/', '', $room) ?: 3));
-    $roomStmt = $pdo->prepare("UPDATE clinic_rooms SET doctor_name = ?, current_ticket = ?, status = 'BUSY' WHERE room_number = ?");
-    $roomStmt->execute([$doctor, $ticket, $roomNum]);
-
-    jsonResponse(true, null, "Patient $ticket assigned to $room");
+    jsonResponse(true, null, "Patient $ticket dispatched to Consultation");
 }
 
 /**
@@ -205,27 +245,17 @@ function updateStatus() {
     $stmt = $pdo->prepare("UPDATE queue_tickets SET status = ? WHERE ticket_number = ?");
     $stmt->execute([$status, $ticket]);
 
-    if ($status === 'COMPLETED' || $status === 'CANCELLED') {
-        $pdo->prepare("UPDATE clinic_rooms SET current_ticket = '---', status = 'AVAILABLE' WHERE current_ticket = ?")->execute([$ticket]);
-    }
-
     jsonResponse(true, null, "Status updated to $status for $ticket");
 }
 
 /**
- * Reset database queue state to original demo state
+ * Reset database queue state (empty all tickets and logs)
  */
 function resetQueue() {
     $pdo = getDBConnection();
-
-    $schemaFile = __DIR__ . '/../../database/schema.sql';
-    if (file_exists($schemaFile)) {
-        $sql = file_get_contents($schemaFile);
-        $pdo->exec($sql);
-        jsonResponse(true, null, 'Queue database reset to default clinic state');
-    } else {
-        jsonResponse(false, null, 'Schema SQL file missing', 500);
-    }
+    $pdo->exec("TRUNCATE TABLE queue_tickets");
+    $pdo->exec("TRUNCATE TABLE system_logs");
+    jsonResponse(true, null, 'Queue database reset to empty state');
 }
 
 /**
@@ -406,4 +436,179 @@ function adminLogout() {
 function getAdminSession() {
     $active = $_SESSION['admin_user'] ?? null;
     jsonResponse(true, ['activeAdmin' => $active], 'Admin session retrieved');
+}
+
+/**
+ * List all consultation rooms with metadata
+ */
+function listRooms() {
+    $pdo = getDBConnection();
+    $stmt = $pdo->query("SELECT * FROM clinic_rooms ORDER BY room_number ASC");
+    $rooms = $stmt->fetchAll();
+    jsonResponse(true, $rooms, 'Consultation rooms list loaded');
+}
+
+/**
+ * Add a new consultation room
+ */
+function addRoom() {
+    $pdo = getDBConnection();
+
+    $roomNum    = sanitizeInput($_POST['room_number'] ?? '');
+    $roomName   = sanitizeInput($_POST['room_name'] ?? '');
+    $department = sanitizeInput($_POST['department'] ?? 'General Medicine');
+    $doctorName = sanitizeInput($_POST['doctor_name'] ?? 'Unassigned Doctor');
+    $colorTheme = sanitizeInput($_POST['color_theme'] ?? 'teal');
+    $status     = sanitizeInput($_POST['status'] ?? 'AVAILABLE');
+
+    if (empty($roomNum) || empty($roomName)) {
+        jsonResponse(false, null, 'Room Number and Room Name are required', 400);
+    }
+
+    $chk = $pdo->prepare("SELECT COUNT(*) FROM clinic_rooms WHERE room_number = ?");
+    $chk->execute([$roomNum]);
+    if ($chk->fetchColumn() > 0) {
+        jsonResponse(false, null, "Room number '$roomNum' already exists", 400);
+    }
+
+    $ins = $pdo->prepare("INSERT INTO clinic_rooms (room_number, room_name, doctor_name, department, color_theme, status) VALUES (?, ?, ?, ?, ?, ?)");
+    $ins->execute([$roomNum, $roomName, $doctorName, $department, $colorTheme, $status]);
+
+    jsonResponse(true, null, "Consultation Room $roomNum created successfully");
+}
+
+/**
+ * Update an existing consultation room
+ */
+function updateRoom() {
+    $pdo = getDBConnection();
+
+    $id         = intval($_POST['id'] ?? 0);
+    $roomNum    = sanitizeInput($_POST['room_number'] ?? '');
+    $roomName   = sanitizeInput($_POST['room_name'] ?? '');
+    $department = sanitizeInput($_POST['department'] ?? 'General Medicine');
+    $doctorName = sanitizeInput($_POST['doctor_name'] ?? 'Unassigned Doctor');
+    $colorTheme = sanitizeInput($_POST['color_theme'] ?? 'teal');
+    $status     = sanitizeInput($_POST['status'] ?? 'AVAILABLE');
+
+    if (!$id || empty($roomNum) || empty($roomName)) {
+        jsonResponse(false, null, 'Room ID, Number, and Name are required', 400);
+    }
+
+    $up = $pdo->prepare("UPDATE clinic_rooms SET room_number = ?, room_name = ?, doctor_name = ?, department = ?, color_theme = ?, status = ? WHERE id = ?");
+    $up->execute([$roomNum, $roomName, $doctorName, $department, $colorTheme, $status, $id]);
+
+    jsonResponse(true, null, "Consultation Room $roomNum updated successfully");
+}
+
+/**
+ * Delete a consultation room
+ */
+function deleteRoom() {
+    $pdo = getDBConnection();
+
+    $id = intval($_REQUEST['id'] ?? 0);
+    if (!$id) {
+        jsonResponse(false, null, 'Room ID required', 400);
+    }
+
+    $del = $pdo->prepare("DELETE FROM clinic_rooms WHERE id = ?");
+    $del->execute([$id]);
+
+    jsonResponse(true, null, "Consultation Room deleted successfully");
+}
+
+/**
+ * List all clinical departments with doctor & room counts
+ */
+function listDepartments() {
+    $pdo = getDBConnection();
+    
+    $pdo->exec("CREATE TABLE IF NOT EXISTS departments (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        code VARCHAR(50) NOT NULL UNIQUE,
+        name VARCHAR(100) NOT NULL,
+        description TEXT DEFAULT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+    $stmt = $pdo->query("SELECT * FROM departments ORDER BY name ASC");
+    $depts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    foreach ($depts as &$dept) {
+        $dName = $dept['name'];
+        $docCountStmt = $pdo->prepare("SELECT COUNT(*) FROM users WHERE role = 'DOCTOR' AND department LIKE ?");
+        $docCountStmt->execute(["%$dName%"]);
+        $dept['doctor_count'] = intval($docCountStmt->fetchColumn());
+
+        $roomStmt = $pdo->prepare("SELECT room_number, doctor_name FROM clinic_rooms WHERE department LIKE ?");
+        $roomStmt->execute(["%$dName%"]);
+        $dept['rooms'] = $roomStmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    jsonResponse(true, $depts, 'Departments list loaded');
+}
+
+/**
+ * Add a new clinical department
+ */
+function addDepartment() {
+    $pdo = getDBConnection();
+
+    $name = sanitizeInput($_POST['name'] ?? '');
+    $code = strtoupper(sanitizeInput($_POST['code'] ?? ''));
+    $desc = sanitizeInput($_POST['description'] ?? '');
+
+    if (empty($name) || empty($code)) {
+        jsonResponse(false, null, 'Department Name and Code are required', 400);
+    }
+
+    $chk = $pdo->prepare("SELECT COUNT(*) FROM departments WHERE code = ? OR name = ?");
+    $chk->execute([$code, $name]);
+    if ($chk->fetchColumn() > 0) {
+        jsonResponse(false, null, "Department code '$code' or name '$name' already exists", 400);
+    }
+
+    $ins = $pdo->prepare("INSERT INTO departments (code, name, description) VALUES (?, ?, ?)");
+    $ins->execute([$code, $name, $desc]);
+
+    jsonResponse(true, null, "Department '$name' created successfully");
+}
+
+/**
+ * Update an existing clinical department
+ */
+function updateDepartment() {
+    $pdo = getDBConnection();
+
+    $id   = intval($_POST['id'] ?? 0);
+    $name = sanitizeInput($_POST['name'] ?? '');
+    $code = strtoupper(sanitizeInput($_POST['code'] ?? ''));
+    $desc = sanitizeInput($_POST['description'] ?? '');
+
+    if (!$id || empty($name) || empty($code)) {
+        jsonResponse(false, null, 'Department ID, Name, and Code are required', 400);
+    }
+
+    $up = $pdo->prepare("UPDATE departments SET code = ?, name = ?, description = ? WHERE id = ?");
+    $up->execute([$code, $name, $desc, $id]);
+
+    jsonResponse(true, null, "Department '$name' updated successfully");
+}
+
+/**
+ * Delete a clinical department
+ */
+function deleteDepartment() {
+    $pdo = getDBConnection();
+
+    $id = intval($_REQUEST['id'] ?? 0);
+    if (!$id) {
+        jsonResponse(false, null, 'Department ID required', 400);
+    }
+
+    $del = $pdo->prepare("DELETE FROM departments WHERE id = ?");
+    $del->execute([$id]);
+
+    jsonResponse(true, null, "Department deleted successfully");
 }

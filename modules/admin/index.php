@@ -1,7 +1,14 @@
+<?php
+if (!function_exists('getAppBaseUrl')) {
+    @include_once __DIR__ . '/../../config/db.php';
+}
+$baseUrl = function_exists('getAppBaseUrl') ? getAppBaseUrl() : '/';
+?>
 <!DOCTYPE html>
 <html lang="en" class="h-full bg-slate-100">
 <head>
   <meta charset="UTF-8">
+  <base href="<?= $baseUrl ?>">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CarePoint - Central Clinic Administration Dashboard</title>
   
@@ -11,7 +18,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@600;800&display=swap" rel="stylesheet">
   
   <!-- Core Stylesheet & Fonts -->
-  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="<?= $baseUrl ?>assets/css/style.css">
   
   <!-- Tailwind CSS Configuration (must be defined before CDN script for first-load rendering) -->
   <script>
@@ -229,14 +236,6 @@
         </div>
 
         <div class="flex items-center gap-3 flex-wrap">
-          <select id="filter-dept" onchange="filterTable()" class="bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-medium text-slate-700 focus:outline-none">
-            <option value="">All Departments</option>
-            <option value="General Medicine">General Medicine</option>
-            <option value="Pediatrics">Pediatrics</option>
-            <option value="Dental Clinic">Dental Clinic</option>
-            <option value="Triage">Triage & Vitals</option>
-          </select>
-
           <select id="filter-status" onchange="filterTable()" class="bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-medium text-slate-700 focus:outline-none">
             <option value="">All Statuses</option>
             <option value="WAITING">Waiting</option>
@@ -260,10 +259,10 @@
               <th class="py-3.5 px-6">Ticket</th>
               <th class="py-3.5 px-6">Patient Name & Demographics</th>
               <th class="py-3.5 px-6">Type</th>
-              <th class="py-3.5 px-6">Department & Room</th>
+              <th class="py-3.5 px-6">Intake Complaint</th>
               <th class="py-3.5 px-6">Check-in Time</th>
               <th class="py-3.5 px-6">Status</th>
-              <th class="py-3.5 px-6 text-right">Dispatch Actions</th>
+              <th class="py-3.5 px-6 text-right">Actions</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100 text-xs text-slate-700" id="admin-table-body">
@@ -283,46 +282,6 @@
       </div>
 
     </div>
-
-    <!-- 3. Doctor & Staff Account Management Panel -->
-    <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-      
-      <!-- Panel Header -->
-      <div class="p-6 border-b border-slate-100 flex flex-wrap items-center justify-between gap-4">
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-2xl bg-teal-50 text-teal-600 flex items-center justify-center">
-            <i data-lucide="stethoscope" class="w-5 h-5"></i>
-          </div>
-          <div>
-            <h3 class="text-base font-bold text-slate-900">Doctor & Staff Roster Management</h3>
-            <p class="text-xs text-slate-500">Create doctor user accounts and assign consultation rooms</p>
-          </div>
-        </div>
-
-        <button onclick="openAddDoctorModal()" class="px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs transition flex items-center gap-2 shadow-md shadow-teal-600/20">
-          <i data-lucide="user-plus" class="w-4 h-4"></i>
-          <span>Add New Doctor</span>
-        </button>
-      </div>
-
-      <!-- Doctor Roster Table -->
-      <div class="overflow-x-auto">
-        <table class="w-full text-left border-collapse">
-          <thead>
-            <tr class="text-[11px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100 bg-slate-50/50">
-              <th class="py-3.5 px-6">Account Username</th>
-              <th class="py-3.5 px-6">Doctor Full Name</th>
-              <th class="py-3.5 px-6">Specialty / Department</th>
-              <th class="py-3.5 px-6">Assigned Consultation Room</th>
-              <th class="py-3.5 px-6">Account Role</th>
-              <th class="py-3.5 px-6 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-slate-100 text-xs text-slate-700" id="doctor-table-body">
-            <!-- Dynamically populated via syncDoctorTable() -->
-          </tbody>
-        </table>
-      </div>
 
     </div>
 
@@ -483,6 +442,119 @@
     </div>
   </div>
 
+  <!-- MODAL: ADD / EDIT CONSULTATION ROOM -->
+  <div id="room-modal" class="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="bg-white text-slate-900 rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-200 relative animate-in zoom-in-95 duration-200">
+      <button onclick="closeRoomModal()" class="absolute top-5 right-5 text-slate-400 hover:text-slate-700">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+
+      <div class="flex items-center gap-3 pb-4 mb-5 border-b border-slate-100">
+        <div class="w-11 h-11 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+          <i data-lucide="door-open" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <h3 class="text-lg font-bold text-slate-900" id="room-modal-title">Add Consultation Room</h3>
+          <p class="text-xs text-slate-500">Manage room number, specialty, and assigned doctor</p>
+        </div>
+      </div>
+
+      <form onsubmit="event.preventDefault(); submitRoomForm();" class="space-y-4 text-xs">
+        <input type="hidden" id="room-id" value="">
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Room Number (e.g., 06)</label>
+          <input type="text" id="room-number" required placeholder="06" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition">
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Room Name / Station Title</label>
+          <input type="text" id="room-name" required placeholder="e.g. Cardiology Clinic" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition">
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Department</label>
+          <select id="room-dept" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition">
+            <!-- Dynamically filled -->
+          </select>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Assigned Doctor Name</label>
+          <input type="text" id="room-doc-name" placeholder="Dr. John Doe, MD (or Unassigned Doctor)" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Color Theme</label>
+            <select id="room-color" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition">
+              <option value="teal">Teal</option>
+              <option value="blue">Blue</option>
+              <option value="purple">Purple</option>
+              <option value="amber">Amber</option>
+              <option value="emerald">Emerald</option>
+              <option value="rose">Rose</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Status</label>
+            <select id="room-status" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition">
+              <option value="AVAILABLE">AVAILABLE</option>
+              <option value="BUSY">BUSY</option>
+              <option value="OFFLINE">OFFLINE</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="pt-4 flex items-center justify-end gap-3">
+          <button type="button" onclick="closeRoomModal()" class="px-4 py-2.5 rounded-xl border border-slate-300 text-slate-600 font-bold hover:bg-slate-50 transition">Cancel</button>
+          <button type="submit" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold transition shadow-md shadow-indigo-600/20">Save Room</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD / EDIT CLINICAL DEPARTMENT -->
+  <div id="dept-modal" class="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="bg-white text-slate-900 rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-200 relative animate-in zoom-in-95 duration-200">
+      <button onclick="closeDeptModal()" class="absolute top-5 right-5 text-slate-400 hover:text-slate-700">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+
+      <div class="flex items-center gap-3 pb-4 mb-5 border-b border-slate-100">
+        <div class="w-11 h-11 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center">
+          <i data-lucide="building-2" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <h3 class="text-lg font-bold text-slate-900" id="dept-modal-title">Add Department</h3>
+          <p class="text-xs text-slate-500">Create new clinical specialty or department</p>
+        </div>
+      </div>
+
+      <form onsubmit="event.preventDefault(); submitDeptForm();" class="space-y-4 text-xs">
+        <input type="hidden" id="dept-id" value="">
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Department Code (e.g. CARDIO)</label>
+          <input type="text" id="dept-code" required placeholder="CARDIO" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-sm uppercase focus:outline-none focus:ring-2 focus:ring-purple-500 focus:bg-white transition">
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Department Name (e.g. Cardiology)</label>
+          <input type="text" id="dept-name" required placeholder="Cardiology" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:bg-white transition">
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Description (Optional)</label>
+          <textarea id="dept-desc" rows="3" placeholder="Cardiovascular care & heart diagnostics" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-xs focus:outline-none focus:ring-2 focus:ring-purple-500 focus:bg-white transition"></textarea>
+        </div>
+
+        <div class="pt-4 flex items-center justify-end gap-3">
+          <button type="button" onclick="closeDeptModal()" class="px-4 py-2.5 rounded-xl border border-slate-300 text-slate-600 font-bold hover:bg-slate-50 transition">Cancel</button>
+          <button type="submit" class="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold transition shadow-md shadow-purple-600/20">Save Department</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Scripts -->
   <script src="assets/js/queue-api.js"></script>
   <script>
@@ -621,6 +693,242 @@
       }
     }
 
+    function openAddRoomModal() {
+      document.getElementById('room-id').value = '';
+      document.getElementById('room-number').value = '';
+      document.getElementById('room-name').value = '';
+      document.getElementById('room-doc-name').value = 'Unassigned Doctor';
+      document.getElementById('room-color').value = 'teal';
+      document.getElementById('room-status').value = 'AVAILABLE';
+      document.getElementById('room-modal-title').textContent = 'Add Consultation Room';
+      document.getElementById('room-modal').classList.remove('hidden');
+    }
+
+    function closeRoomModal() {
+      document.getElementById('room-modal').classList.add('hidden');
+    }
+
+    function openEditRoomModal(roomJson) {
+      const room = JSON.parse(decodeURIComponent(roomJson));
+      document.getElementById('room-id').value = room.id;
+      document.getElementById('room-number').value = room.room_number;
+      document.getElementById('room-name').value = room.room_name;
+      document.getElementById('room-dept').value = room.department;
+      document.getElementById('room-doc-name').value = room.doctor_name || 'Unassigned Doctor';
+      document.getElementById('room-color').value = room.color_theme || 'teal';
+      document.getElementById('room-status').value = room.status || 'AVAILABLE';
+      document.getElementById('room-modal-title').textContent = `Edit Consultation Room ${room.room_number}`;
+      document.getElementById('room-modal').classList.remove('hidden');
+    }
+
+    async function submitRoomForm() {
+      const id = document.getElementById('room-id').value;
+      const num = document.getElementById('room-number').value.trim();
+      const name = document.getElementById('room-name').value.trim();
+      const dept = document.getElementById('room-dept').value;
+      const docName = document.getElementById('room-doc-name').value.trim();
+      const color = document.getElementById('room-color').value;
+      const status = document.getElementById('room-status').value;
+
+      if (!num || !name) {
+        showToast('Room number and room name are required', 'Warning');
+        return;
+      }
+
+      const formData = new FormData();
+      if (id) formData.append('id', id);
+      formData.append('room_number', num);
+      formData.append('room_name', name);
+      formData.append('department', dept);
+      formData.append('doctor_name', docName || 'Unassigned Doctor');
+      formData.append('color_theme', color);
+      formData.append('status', status);
+
+      const action = id ? 'update_room' : 'add_room';
+      try {
+        const res = await fetch(getAdminApiUrl(action), { method: 'POST', body: formData });
+        const json = await res.json();
+        if (json.success) {
+          closeRoomModal();
+          showToast(json.message || 'Room saved successfully', 'Success');
+          syncRoomTable();
+        } else {
+          showToast(json.message || 'Error saving room', 'Error');
+        }
+      } catch (e) {
+        showToast('Server error saving room', 'Error');
+      }
+    }
+
+    async function deleteRoom(id, num) {
+      if (!confirm(`Delete Consultation Room ${num}?`)) return;
+      try {
+        const res = await fetch(`${getAdminApiUrl('delete_room')}&id=${id}`, { method: 'POST' });
+        const json = await res.json();
+        if (json.success) {
+          showToast(`Room ${num} deleted`, 'Deleted');
+          syncRoomTable();
+        } else {
+          showToast(json.message || 'Error deleting room', 'Error');
+        }
+      } catch (e) {
+        showToast('Server error deleting room', 'Error');
+      }
+    }
+
+    async function syncRoomTable() {
+      try {
+        const res = await fetch(getAdminApiUrl('list_rooms'));
+        const json = await res.json();
+        if (json.success && json.data) {
+          const tbody = document.getElementById('room-table-body');
+          const docRoomSelect = document.getElementById('doc-room');
+
+          if (tbody) {
+            tbody.innerHTML = json.data.map(r => `
+              <tr class="hover:bg-slate-50/80 transition">
+                <td class="py-4 px-6 font-mono font-bold text-indigo-900">Room ${r.room_number}</td>
+                <td class="py-4 px-6 font-bold text-slate-900">${r.room_name}</td>
+                <td class="py-4 px-6"><span class="px-2.5 py-1 rounded-lg bg-slate-100 font-medium text-slate-700">${r.department}</span></td>
+                <td class="py-4 px-6 font-semibold text-teal-700">${r.doctor_name || 'Unassigned Doctor'}</td>
+                <td class="py-4 px-6"><span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-${r.color_theme}-50 text-${r.color_theme}-700 border border-${r.color_theme}-200">${r.color_theme}</span></td>
+                <td class="py-4 px-6"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${r.status === 'AVAILABLE' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : (r.status === 'BUSY' ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-rose-50 text-rose-700 border border-rose-200')}">${r.status}</span></td>
+                <td class="py-4 px-6 text-right flex items-center justify-end gap-1">
+                  <button onclick="openEditRoomModal('${encodeURIComponent(JSON.stringify(r))}')" class="p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-indigo-600 transition" title="Edit Room"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
+                  <button onclick="deleteRoom(${r.id}, '${r.room_number}')" class="p-2 rounded-lg hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition" title="Delete Room"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                </td>
+              </tr>
+            `).join('');
+          }
+
+          if (docRoomSelect) {
+            docRoomSelect.innerHTML = json.data.map(r => `<option value="${r.room_number}">Room ${r.room_number} (${r.room_name})</option>`).join('');
+          }
+
+          if (window.lucide) lucide.createIcons();
+        }
+      } catch (e) {
+        console.log('Sync room error:', e);
+      }
+    }
+
+    function openAddDeptModal() {
+      document.getElementById('dept-id').value = '';
+      document.getElementById('dept-code').value = '';
+      document.getElementById('dept-name').value = '';
+      document.getElementById('dept-desc').value = '';
+      document.getElementById('dept-modal-title').textContent = 'Add Department';
+      document.getElementById('dept-modal').classList.remove('hidden');
+    }
+
+    function closeDeptModal() {
+      document.getElementById('dept-modal').classList.add('hidden');
+    }
+
+    function openEditDeptModal(deptJson) {
+      const d = JSON.parse(decodeURIComponent(deptJson));
+      document.getElementById('dept-id').value = d.id;
+      document.getElementById('dept-code').value = d.code;
+      document.getElementById('dept-name').value = d.name;
+      document.getElementById('dept-desc').value = d.description || '';
+      document.getElementById('dept-modal-title').textContent = `Edit Department ${d.name}`;
+      document.getElementById('dept-modal').classList.remove('hidden');
+    }
+
+    async function submitDeptForm() {
+      const id = document.getElementById('dept-id').value;
+      const code = document.getElementById('dept-code').value.trim();
+      const name = document.getElementById('dept-name').value.trim();
+      const desc = document.getElementById('dept-desc').value.trim();
+
+      if (!code || !name) {
+        showToast('Department code and name are required', 'Warning');
+        return;
+      }
+
+      const formData = new FormData();
+      if (id) formData.append('id', id);
+      formData.append('code', code);
+      formData.append('name', name);
+      formData.append('description', desc);
+
+      const action = id ? 'update_department' : 'add_department';
+      try {
+        const res = await fetch(getAdminApiUrl(action), { method: 'POST', body: formData });
+        const json = await res.json();
+        if (json.success) {
+          closeDeptModal();
+          showToast(json.message || 'Department saved successfully', 'Success');
+          syncDeptTable();
+        } else {
+          showToast(json.message || 'Error saving department', 'Error');
+        }
+      } catch (e) {
+        showToast('Server error saving department', 'Error');
+      }
+    }
+
+    async function deleteDept(id, name) {
+      if (!confirm(`Delete Department '${name}'?`)) return;
+      try {
+        const res = await fetch(`${getAdminApiUrl('delete_department')}&id=${id}`, { method: 'POST' });
+        const json = await res.json();
+        if (json.success) {
+          showToast(`Department '${name}' deleted`, 'Deleted');
+          syncDeptTable();
+        } else {
+          showToast(json.message || 'Error deleting department', 'Error');
+        }
+      } catch (e) {
+        showToast('Server error deleting department', 'Error');
+      }
+    }
+
+    async function syncDeptTable() {
+      try {
+        const res = await fetch(getAdminApiUrl('list_departments'));
+        const json = await res.json();
+        if (json.success && json.data) {
+          const tbody = document.getElementById('dept-table-body');
+          const docDeptSelect = document.getElementById('doc-dept');
+          const roomDeptSelect = document.getElementById('room-dept');
+          const filterDeptSelect = document.getElementById('filter-dept');
+
+          if (tbody) {
+            tbody.innerHTML = json.data.map(d => `
+              <tr class="hover:bg-slate-50/80 transition">
+                <td class="py-4 px-6 font-mono font-bold text-purple-900">${d.code}</td>
+                <td class="py-4 px-6 font-bold text-slate-900">${d.name}</td>
+                <td class="py-4 px-6 text-slate-500">${d.description || '---'}</td>
+                <td class="py-4 px-6"><span class="px-2.5 py-1 rounded-lg bg-teal-50 border border-teal-200 text-teal-800 font-bold">${d.doctor_count} Doctor(s)</span></td>
+                <td class="py-4 px-6">${(d.rooms && d.rooms.length) ? d.rooms.map(r => `<span class="px-2 py-0.5 rounded text-[10px] bg-slate-100 font-mono">Room ${r.room_number}</span>`).join(' ') : '<span class="text-slate-400">None</span>'}</td>
+                <td class="py-4 px-6 text-right flex items-center justify-end gap-1">
+                  <button onclick="openEditDeptModal('${encodeURIComponent(JSON.stringify(d))}')" class="p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-purple-600 transition" title="Edit Department"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
+                  <button onclick="deleteDept(${d.id}, '${d.name}')" class="p-2 rounded-lg hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition" title="Delete Department"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                </td>
+              </tr>
+            `).join('');
+          }
+
+          if (docDeptSelect) {
+            docDeptSelect.innerHTML = json.data.map(d => `<option value="${d.name}">${d.name}</option>`).join('');
+          }
+          if (roomDeptSelect) {
+            roomDeptSelect.innerHTML = json.data.map(d => `<option value="${d.name}">${d.name}</option>`).join('');
+          }
+          if (filterDeptSelect) {
+            const curVal = filterDeptSelect.value;
+            filterDeptSelect.innerHTML = '<option value="">All Departments</option>' + json.data.map(d => `<option value="${d.name}">${d.name}</option>`).join('');
+            filterDeptSelect.value = curVal;
+          }
+
+          if (window.lucide) lucide.createIcons();
+        }
+      } catch (e) {
+        console.log('Sync dept error:', e);
+      }
+    }
+
     async function submitAdminWalkin() {
       const name = document.getElementById('admin-walkin-name').value;
       const phone = document.getElementById('admin-walkin-phone').value;
@@ -728,7 +1036,7 @@
                 }
 
                 return `
-                  <tr class="hover:bg-slate-50/80 transition table-row-item" data-dept="${dept}" data-status="${status}">
+                  <tr class="hover:bg-slate-50/80 transition table-row-item" data-status="${status}">
                     <td class="py-4 px-6">
                       <span class="font-mono font-black text-sm px-2.5 py-1 rounded-xl ${isPriority ? 'bg-amber-100 text-amber-900 border border-amber-300' : 'bg-teal-50 text-teal-800 border border-teal-200'}">${ticket}</span>
                     </td>
@@ -743,13 +1051,12 @@
                       <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">${type}</span>
                     </td>
                     <td class="py-4 px-6">
-                      <p class="font-semibold text-slate-800">${dept}</p>
-                      <p class="text-[10px] text-slate-500">${doctor} (${room})</p>
+                      <p class="font-medium text-slate-800">${p.complaint || 'General Consultation'}</p>
                     </td>
                     <td class="py-4 px-6 font-mono text-slate-500">${time}</td>
                     <td class="py-4 px-6">${statusBadge}</td>
                     <td class="py-4 px-6 text-right space-x-1">
-                      ${status === 'WAITING' ? `<button onclick="dispatchPatient('${ticket}', '${name}')" class="p-2 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-teal-600" title="Dispatch to Room"><i data-lucide="phone-forwarded" class="w-4 h-4"></i></button>` : ''}
+                      ${status === 'WAITING' ? `<button onclick="dispatchPatient('${ticket}', '${name}')" class="p-2 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-teal-600" title="Call Patient to Consultation"><i data-lucide="phone-forwarded" class="w-4 h-4"></i></button>` : ''}
                       <button onclick="QueueManager.playChime(); showToast('Chime sounded for ${ticket}', 'Recall');" class="p-2 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-teal-600" title="Sound Chime"><i data-lucide="volume-2" class="w-4 h-4"></i></button>
                     </td>
                   </tr>
@@ -798,6 +1105,8 @@
 
             syncAdminTable();
             syncDoctorTable();
+            syncRoomTable();
+            syncDeptTable();
           } else {
             isAdminLoggedIn = false;
             document.getElementById('admin-login-view').classList.remove('hidden');
@@ -865,6 +1174,8 @@
       if (isAdminLoggedIn) {
         syncAdminTable();
         syncDoctorTable();
+        syncRoomTable();
+        syncDeptTable();
       }
     });
   </script>

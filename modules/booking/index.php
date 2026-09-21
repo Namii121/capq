@@ -1,7 +1,14 @@
+<?php
+if (!function_exists('getAppBaseUrl')) {
+    @include_once __DIR__ . '/../../config/db.php';
+}
+$baseUrl = function_exists('getAppBaseUrl') ? getAppBaseUrl() : '/';
+?>
 <!DOCTYPE html>
 <html lang="en" class="h-full bg-slate-50">
 <head>
   <meta charset="UTF-8">
+  <base href="<?= $baseUrl ?>">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CarePoint Medical - Online Appointment & Patient Queue Portal</title>
   
@@ -11,7 +18,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
   
   <!-- Core Stylesheet & Fonts -->
-  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="<?= $baseUrl ?>assets/css/style.css">
   
   <!-- Tailwind CSS Configuration (must be defined before CDN script for first-load rendering) -->
   <script>
@@ -291,26 +298,17 @@
         <div>
           <h4 class="text-sm font-bold uppercase tracking-wider text-slate-900 mb-4 pb-2 border-b border-slate-100 flex items-center gap-2">
             <i data-lucide="stethoscope" class="w-4 h-4 text-teal-600"></i>
-            2. Medical Specialty & Assigned Doctor
+            2. Attending Physician & Clinic Information
           </h4>
 
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div>
-              <label class="block text-xs font-semibold text-slate-700 mb-1.5">Clinical Department <span class="text-rose-500">*</span></label>
-              <select name="department_id" id="field-dept" onchange="updateDoctors()" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:bg-white transition">
-                <option value="General Medicine" selected>General Medicine / Family Medicine</option>
-                <option value="Pediatrics">Pediatrics (Children's Clinic)</option>
-                <option value="Dental Clinic">Dental & Oral Care</option>
-                <option value="Cardiology">Cardiology Specialization</option>
-                <option value="Dermatology">Dermatology & Skin Care</option>
-              </select>
+          <div class="bg-teal-50/70 border border-teal-200/80 rounded-2xl p-4 flex items-center gap-4">
+            <div class="w-12 h-12 rounded-2xl bg-teal-600 text-white flex items-center justify-center font-bold text-lg flex-shrink-0 shadow-sm">
+              <i data-lucide="user-check" class="w-6 h-6"></i>
             </div>
-
             <div>
-              <label class="block text-xs font-semibold text-slate-700 mb-1.5">Attending Doctor / Specialist <span class="text-rose-500">*</span></label>
-              <select name="doctor_id" id="field-doctor" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:bg-white transition">
-                <option value="General Medicine Physician (Room 03)" selected>General Medicine Physician (Room 03)</option>
-              </select>
+              <h5 class="text-base font-extrabold text-teal-950">Dr. Sarah Santos, MD</h5>
+              <p class="text-xs text-teal-800 font-medium">Attending Physician • Primary Care Consultation Clinic</p>
+              <p class="text-[11px] text-teal-600 mt-0.5">Your priority queue ticket will be directly routed to Dr. Santos upon check-in.</p>
             </div>
           </div>
         </div>
@@ -456,52 +454,9 @@
       document.getElementById('field-slot').value = time;
     }
 
-    async function updateDoctors() {
-      const dept = document.getElementById('field-dept').value;
-      const docSelect = document.getElementById('field-doctor');
-      docSelect.innerHTML = '';
-
-      try {
-        const res = await fetch('modules/booking/actions.php?action=get_doctors');
-        const json = await res.json();
-        if (json.success && json.data) {
-          const list = json.data.list || [];
-          const type = json.data.type;
-          
-          if (type === 'users' && list.length > 0) {
-            const matching = list.filter(d => !dept || d.department.toLowerCase().includes(dept.toLowerCase()) || dept.toLowerCase().includes(d.department.toLowerCase()));
-            const targetList = matching.length > 0 ? matching : list;
-            targetList.forEach(d => {
-              const roomStr = d.room_number ? ` (Room ${d.room_number})` : '';
-              docSelect.add(new Option(`${d.full_name}${roomStr} - ${d.department}`, d.full_name));
-            });
-            return;
-          }
-        }
-      } catch (e) {
-        console.log('Fetch doctors fallback:', e);
-      }
-
-      // Dynamic department room specialist mapping
-      if (dept === 'Pediatrics') {
-        docSelect.add(new Option('Pediatric Specialist (Room 02)', 'Pediatric Specialist (Room 02)'));
-      } else if (dept === 'Dental Clinic') {
-        docSelect.add(new Option('Dental & Oral Specialist (Room 04)', 'Dental Specialist (Room 04)'));
-      } else if (dept === 'Cardiology') {
-        docSelect.add(new Option('Cardiology Specialist (Room 03)', 'Cardiology Specialist (Room 03)'));
-      } else if (dept === 'Dermatology') {
-        docSelect.add(new Option('Dermatology Specialist (Room 03)', 'Dermatology Specialist (Room 03)'));
-      } else {
-        docSelect.add(new Option('General Medicine Physician (Room 03)', 'General Medicine Physician (Room 03)'));
-        docSelect.add(new Option('Triage & Vitals Practitioner (Room 01)', 'Triage Practitioner (Room 01)'));
-      }
-    }
-
     async function submitBooking() {
       const name = document.getElementById('field-name').value;
       const phone = document.getElementById('field-phone').value;
-      const dept = document.getElementById('field-dept').value;
-      const doc = document.getElementById('field-doctor').value;
       const slot = document.getElementById('field-slot').value;
       const complaint = document.getElementById('field-complaint').value;
       const isPriority = document.getElementById('field-priority').checked ? '1' : '0';
@@ -514,7 +469,6 @@
       const formData = new FormData();
       formData.append('name', name);
       formData.append('phone', phone);
-      formData.append('department', dept);
       formData.append('time_slot', slot);
       formData.append('complaint', complaint);
       formData.append('is_priority', isPriority);
@@ -528,7 +482,7 @@
         if (json.success && json.data) {
           const t = json.data;
           document.getElementById('modal-ticket-num').textContent = t.ticket_number;
-          document.getElementById('modal-ticket-dept').textContent = t.department;
+          document.getElementById('modal-ticket-dept').textContent = 'General Consultation';
           document.getElementById('modal-ticket-doc').textContent = t.doctor_name;
           document.getElementById('modal-patient-name').textContent = t.patient_name;
           document.getElementById('modal-slot-time').textContent = t.time_slot;

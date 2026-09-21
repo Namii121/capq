@@ -3,6 +3,18 @@
  * CarePoint CAPQ - Database Connection & Helper Functions
  * Native PHP PDO Database Manager
  */
+if (!function_exists('getAppBaseUrl')) {
+    function getAppBaseUrl() {
+        $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
+        $pos = strpos($scriptName, '/modules/');
+        if ($pos !== false) {
+            return substr($scriptName, 0, $pos + 1);
+        }
+        $dir = dirname($scriptName);
+        $dirFormatted = str_replace('\\', '/', $dir);
+        return ($dirFormatted === '/' || $dirFormatted === '.') ? '/' : rtrim($dirFormatted, '/') . '/';
+    }
+}
 
 function getDBConnection() {
     static $pdo = null;

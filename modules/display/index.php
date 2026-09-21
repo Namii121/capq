@@ -1,7 +1,14 @@
+<?php
+if (!function_exists('getAppBaseUrl')) {
+    @include_once __DIR__ . '/../../config/db.php';
+}
+$baseUrl = function_exists('getAppBaseUrl') ? getAppBaseUrl() : '/';
+?>
 <!DOCTYPE html>
 <html lang="en" class="h-full bg-slate-950 text-white select-none">
 <head>
   <meta charset="UTF-8">
+  <base href="<?= $baseUrl ?>">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CarePoint Medical - Live Waiting Room Queue Display</title>
   
@@ -11,7 +18,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@700;800;900&display=swap" rel="stylesheet">
   
   <!-- Core Stylesheet & Fonts -->
-  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="<?= $baseUrl ?>assets/css/style.css">
   
   <!-- Tailwind CSS Configuration (must be defined before CDN script for first-load rendering) -->
   <script>
@@ -171,14 +178,34 @@
           PLEASE PROCEED TO
         </p>
         <h3 id="tv-room" class="text-2xl sm:text-3xl font-black text-white uppercase tracking-tight">WAITING FOR NEXT PATIENT</h3>
-        <p id="tv-doctor" class="text-sm font-semibold text-slate-400 mt-1">Consultation Rooms Available</p>
+        <p id="tv-doctor" class="text-sm font-semibold text-slate-400 mt-1">Dr. Sarah Santos, MD • Attending Physician</p>
       </div>
 
     </div>
 
-    <!-- Right 6 Cols: MULTI-ROOM QUEUE STATUS BOARD -->
+    <!-- Right 6 Cols: MULTI-ROOM QUEUE STATUS BOARD & PREPARING BANNER -->
     <div class="lg:col-span-6 flex flex-col justify-between space-y-3 sm:space-y-3.5">
       
+      <!-- PREPARING / ON DECK SPOTLIGHT BANNER -->
+      <div id="tv-preparing-banner" class="bg-gradient-to-r from-amber-950/80 via-amber-900/50 to-slate-900 border-2 border-amber-500/80 rounded-2xl p-4 flex items-center justify-between shadow-xl hidden">
+        <div class="flex items-center gap-3.5">
+          <div class="w-12 h-12 rounded-xl bg-amber-500 text-slate-950 font-mono font-black text-xl flex items-center justify-center shadow-md animate-pulse" id="tv-prep-ticket">
+            ---
+          </div>
+          <div>
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-black uppercase tracking-wider border border-amber-500/40">
+              <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping"></span>
+              ON DECK / PREPARE NOW
+            </span>
+            <h4 class="text-base font-black text-white mt-0.5" id="tv-prep-name">Patient Name</h4>
+          </div>
+        </div>
+        <div class="text-right">
+          <p class="text-xs font-bold text-amber-300 uppercase tracking-wider">PLEASE STAND BY</p>
+          <p class="text-[11px] text-slate-400 font-medium">Prepare for Consultation</p>
+        </div>
+      </div>
+
       <div class="flex items-center justify-between pb-2 border-b border-slate-800 text-xs font-bold uppercase tracking-wider text-slate-400 px-3">
         <span>Consultation Room / Service</span>
         <span class="text-center">Now Serving</span>
@@ -187,6 +214,21 @@
 
       <div id="rooms-status-list" class="space-y-3 sm:space-y-3.5">
         <!-- Room cards rendered dynamically via JS -->
+      </div>
+
+      <!-- ALL PENDING QUEUE NUMBERS IN LIVE VIEW -->
+      <div class="mt-3 bg-slate-900/90 border border-slate-800 rounded-2xl p-4 flex-1 flex flex-col min-h-[220px]">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+          <div class="flex items-center gap-2">
+            <i data-lucide="list-ordered" class="w-4 h-4 text-teal-400"></i>
+            <h3 class="text-xs font-black uppercase tracking-wider text-slate-200">All Pending Queue Numbers in Line</h3>
+          </div>
+          <span class="text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-slate-800 text-teal-400 border border-slate-700" id="tv-pending-count">0 Pending</span>
+        </div>
+        
+        <div id="tv-pending-queue-grid" class="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-2 overflow-y-auto max-h-[280px] pr-1">
+          <!-- Pending ticket cards rendered dynamically via JS -->
+        </div>
       </div>
 
     </div>
@@ -201,7 +243,7 @@
     </div>
     <div class="overflow-hidden whitespace-nowrap text-slate-300 flex-1">
       <p class="animate-marquee inline-block font-semibold">
-        🔔 Welcome to CarePoint Medical Center. Please prepare your Queue Ticket and valid Photo ID when your number is called. Wear a face mask if experiencing cough or respiratory symptoms. Free Clinic WiFi: <span class="text-teal-300 font-bold">CarePoint_Guest</span> (No password). If you require immediate emergency assistance, notify the Triage Desk in Room 1 immediately.
+        🔔 Welcome to CarePoint Medical Center. Please prepare your Queue Ticket and valid Photo ID when your number is called. Wear a face mask if experiencing cough or respiratory symptoms. Free Clinic WiFi: <span class="text-teal-300 font-bold">CarePoint_Guest</span> (No password).
       </p>
     </div>
   </footer>
@@ -225,9 +267,9 @@
       if (state && state.nowCalling) {
         const t = state.nowCalling.ticket_number || state.nowCalling.ticket || '---';
         const name = state.nowCalling.patient_name || state.nowCalling.name || 'Patient';
-        const room = state.nowCalling.room_assigned || state.nowCalling.room || 'Room 03';
-        const dept = state.nowCalling.department || 'General Medicine';
-        const doc = state.nowCalling.doctor_name || state.nowCalling.doctor || 'Attending Physician';
+        const room = state.nowCalling.room_assigned || state.nowCalling.room || 'Consultation Room';
+        const dept = state.nowCalling.department || 'General Consultation';
+        const doc = state.nowCalling.doctor_name || state.nowCalling.doctor || 'Dr. Sarah Santos, MD';
         const time = state.nowCalling.time_slot || state.nowCalling.time || '';
 
         document.getElementById('tv-ticket').textContent = t;
@@ -239,8 +281,19 @@
         document.getElementById('tv-ticket').textContent = '---';
         document.getElementById('tv-patient-name').textContent = 'No Active Ticket';
         document.getElementById('tv-room').textContent = 'WAITING FOR NEXT PATIENT';
-        document.getElementById('tv-doctor').textContent = 'Consultation Rooms Available';
+        document.getElementById('tv-doctor').textContent = 'Dr. Sarah Santos, MD • Attending Physician';
         document.getElementById('tv-call-time').textContent = 'SYSTEM IDLE';
+      }
+
+      if (state && state.nowPreparing) {
+        const prep = state.nowPreparing;
+        const pTicket = prep.ticket_number || prep.ticket || '---';
+        const pName = prep.patient_name || prep.name || 'Patient';
+        document.getElementById('tv-prep-ticket').textContent = pTicket;
+        document.getElementById('tv-prep-name').textContent = pName;
+        document.getElementById('tv-preparing-banner').classList.remove('hidden');
+      } else {
+        document.getElementById('tv-preparing-banner').classList.add('hidden');
       }
 
       // Render Rooms Status Board
@@ -283,8 +336,60 @@
             </div>
           `;
         }).join('');
-        if (window.lucide) lucide.createIcons();
       }
+
+      // Render All Pending Queue Numbers Grid
+      const pendingGrid = document.getElementById('tv-pending-queue-grid');
+      const pendingCount = document.getElementById('tv-pending-count');
+      const upcoming = (state && state.upcomingQueue) ? state.upcomingQueue : [];
+
+      if (pendingCount) {
+        pendingCount.textContent = `${upcoming.length} Pending`;
+      }
+
+      if (pendingGrid) {
+        if (upcoming.length === 0) {
+          pendingGrid.innerHTML = `
+            <div class="col-span-full text-center py-8 text-slate-500 text-xs font-medium border border-dashed border-slate-800 rounded-xl">
+              No pending patients in queue line.
+            </div>
+          `;
+        } else {
+          pendingGrid.innerHTML = upcoming.map(item => {
+            const ticket = item.ticket || item.ticket_number || '---';
+            const name = item.name || item.patient_name || 'Patient';
+            const isPrep = item.status === 'PREPARING' || item.isPreparing;
+            const isPrio = item.isPriority || item.is_priority;
+
+            const cardBg = isPrep
+              ? 'bg-amber-950/40 border-amber-500/60 text-amber-200 shadow-md shadow-amber-500/10'
+              : 'bg-slate-950/70 border-slate-800 text-slate-300';
+
+            const badgeBg = isPrep
+              ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+              : 'bg-teal-500/20 text-teal-300 border-teal-500/40';
+
+            const badgeText = isPrep ? 'ON DECK' : 'WAITING';
+
+            return `
+              <div class="p-2.5 rounded-xl border ${cardBg} flex flex-col justify-between transition">
+                <div class="flex items-center justify-between gap-1 mb-1">
+                  <span class="font-mono font-black text-base ${isPrep ? 'text-amber-300' : 'text-teal-300'}">${ticket}</span>
+                  <span class="text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${badgeBg}">
+                    ${badgeText}
+                  </span>
+                </div>
+                <div class="flex items-center justify-between text-[11px] text-slate-400">
+                  <span class="font-semibold truncate max-w-[120px] text-slate-200">${name}</span>
+                  ${isPrio ? '<span class="text-[9px] font-bold text-amber-400 bg-amber-950/80 px-1 py-0.2 rounded border border-amber-500/40">PRIORITY</span>' : ''}
+                </div>
+              </div>
+            `;
+          }).join('');
+        }
+      }
+
+      if (window.lucide) lucide.createIcons();
     }
 
     syncDisplayWithState();

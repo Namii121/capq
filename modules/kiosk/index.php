@@ -1,7 +1,14 @@
+<?php
+if (!function_exists('getAppBaseUrl')) {
+    @include_once __DIR__ . '/../../config/db.php';
+}
+$baseUrl = function_exists('getAppBaseUrl') ? getAppBaseUrl() : '/';
+?>
 <!DOCTYPE html>
 <html lang="en" class="h-full bg-slate-950 text-white select-none">
 <head>
   <meta charset="UTF-8">
+  <base href="<?= $baseUrl ?>">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CarePoint - Patient Self-Check-In Kiosk</title>
   
@@ -11,7 +18,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@600;800&display=swap" rel="stylesheet">
   
   <!-- Core Stylesheet & Fonts -->
-  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="<?= $baseUrl ?>assets/css/style.css">
   
   <!-- Tailwind CSS Configuration (must be defined before CDN script for first-load rendering) -->
   <script>
@@ -133,7 +140,7 @@
           <div class="space-y-3">
             <label class="block text-xs font-bold uppercase tracking-wider text-slate-400">Appointment Code</label>
             <div class="flex gap-2">
-              <input type="text" id="kiosk-ref-input" placeholder="CP-8921" value="CP-8921" readonly class="flex-1 bg-slate-950 border-2 border-slate-700 rounded-2xl px-4 py-3 text-lg uppercase font-mono tracking-widest text-teal-300 text-center font-bold focus:outline-none focus:border-teal-400">
+              <input type="text" id="kiosk-ref-input" placeholder="e.g. A-101 or CP-8921" value="" onkeydown="if(event.key === 'Enter') handleAppointmentCheckin()" class="flex-1 bg-slate-950 border-2 border-slate-700 rounded-2xl px-4 py-3 text-lg uppercase font-mono tracking-widest text-teal-300 text-center font-bold focus:outline-none focus:border-teal-400">
               <button onclick="handleAppointmentCheckin()" class="px-5 py-3 rounded-2xl bg-teal-500 hover:bg-teal-400 text-slate-950 font-black text-xs sm:text-sm transition flex items-center gap-1.5 shadow-lg shadow-teal-500/20">
                 <i data-lucide="check" class="w-4 h-4"></i>
                 <span>Check-in</span>
@@ -183,25 +190,16 @@
             No appointment? Tap your required clinic specialty below to instantly generate your queue ticket slip.
           </p>
 
-          <div class="grid grid-cols-2 gap-2.5 sm:gap-3">
-            <button onclick="issueKioskTicket('General Medicine', 'A', 'Dr. Sarah Santos, MD')" class="touch-btn p-3.5 sm:p-4 rounded-2xl bg-slate-950 border-2 border-slate-800 hover:border-teal-400 text-left transition flex flex-col justify-between">
-              <span class="text-sm font-bold text-white">General Care</span>
-              <span class="text-[11px] text-teal-400 mt-1 font-mono">~15m wait (3 ahead)</span>
-            </button>
-
-            <button onclick="issueKioskTicket('Pediatrics', 'P', 'Dr. Patricia Lim, MD')" class="touch-btn p-3.5 sm:p-4 rounded-2xl bg-slate-950 border-2 border-slate-800 hover:border-teal-400 text-left transition flex flex-col justify-between">
-              <span class="text-sm font-bold text-white">Pediatrics</span>
-              <span class="text-[11px] text-teal-400 mt-1 font-mono">~10m wait (1 ahead)</span>
-            </button>
-
-            <button onclick="issueKioskTicket('Dental Clinic', 'D', 'Dr. Michael Tan, DMD')" class="touch-btn p-3.5 sm:p-4 rounded-2xl bg-slate-950 border-2 border-slate-800 hover:border-teal-400 text-left transition flex flex-col justify-between">
-              <span class="text-sm font-bold text-white">Dental Care</span>
-              <span class="text-[11px] text-teal-400 mt-1 font-mono">~25m wait (4 ahead)</span>
-            </button>
-
-            <button onclick="issueKioskTicket('Triage & Vitals', 'T', 'Nurse Station 1')" class="touch-btn p-3.5 sm:p-4 rounded-2xl bg-slate-950 border-2 border-slate-800 hover:border-teal-400 text-left transition flex flex-col justify-between">
-              <span class="text-sm font-bold text-white">Triage & Lab</span>
-              <span class="text-[11px] text-teal-400 mt-1 font-mono">~5m wait (0 ahead)</span>
+          <div class="mt-4">
+            <button onclick="issueKioskTicket('General Consultation', 'W', 'Dr. Sarah Santos, MD')" class="touch-btn w-full p-5 rounded-2xl bg-gradient-to-r from-teal-600 to-teal-500 hover:from-teal-500 hover:to-teal-400 text-white font-black text-lg transition flex items-center justify-between shadow-xl shadow-teal-900/40 border border-teal-400/30">
+              <div class="flex items-center gap-3">
+                <i data-lucide="ticket-plus" class="w-7 h-7"></i>
+                <div class="text-left">
+                  <p class="text-base font-extrabold">Get Consultation Ticket</p>
+                  <p class="text-xs text-teal-100 font-normal">Dr. Sarah Santos, MD • Primary Care Clinic</p>
+                </div>
+              </div>
+              <span class="text-sm bg-white/20 px-3 py-1 rounded-xl font-mono">1-Tap Print &rarr;</span>
             </button>
           </div>
         </div>
@@ -211,7 +209,7 @@
             <i data-lucide="printer" class="w-4 h-4 text-blue-400"></i>
             Thermal Dispenser Ready
           </span>
-          <span class="text-blue-400 font-bold">Tap Specialty to Print &rarr;</span>
+          <span class="text-blue-400 font-bold">Tap Button to Print Slip &rarr;</span>
         </div>
       </div>
 
@@ -298,16 +296,16 @@
 
     function appendKey(num) {
       const input = document.getElementById('kiosk-ref-input');
-      if (input.value.length < 8) {
+      if (input.value.length < 12) {
         input.value += num;
       }
     }
     function clearKey() {
-      document.getElementById('kiosk-ref-input').value = 'CP-';
+      document.getElementById('kiosk-ref-input').value = '';
     }
     function backspaceKey() {
       const input = document.getElementById('kiosk-ref-input');
-      if (input.value.length > 3) {
+      if (input.value.length > 0) {
         input.value = input.value.slice(0, -1);
       }
     }
@@ -325,7 +323,7 @@
         const nowTime = data ? data.time : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         const ahead = (data && typeof data.patients_ahead !== 'undefined') ? data.patients_ahead : 0;
         const wait = (data && typeof data.est_wait_min !== 'undefined') ? data.est_wait_min : 0;
-        const room = data ? (data.room_assigned || 'Room 03') : 'Room 03';
+        const room = data ? (data.room_assigned || 'Consultation Room') : 'Consultation Room';
         const doctor = data ? (data.doctor_name || doc) : doc;
 
         document.getElementById('slip-number').textContent = ticket;
@@ -356,7 +354,7 @@
 
         document.getElementById('slip-number').textContent = ticket;
         document.getElementById('slip-dept').textContent = 'General Medicine (Priority Lane)';
-        document.getElementById('slip-doctor').textContent = 'Dr. Sarah Santos, MD • Room 03';
+        document.getElementById('slip-doctor').textContent = 'Dr. Sarah Santos, MD • Consultation Room';
         document.getElementById('slip-ahead').textContent = '0 (Next Priority)';
         document.getElementById('slip-wait').textContent = 'Proceed Immediately';
         document.getElementById('slip-time').textContent = nowTime;
@@ -370,7 +368,7 @@
 
     async function handleAppointmentCheckin() {
       const code = document.getElementById('kiosk-ref-input').value.trim();
-      if (!code || code === 'CP-') {
+      if (!code) {
         showToast('Please enter your appointment reference code.', 'Code Required');
         return;
       }
