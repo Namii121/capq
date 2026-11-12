@@ -1,0 +1,525 @@
+{
+  "info": {
+    "_postman_id": "c7a8b4e2-9d31-419b-b9f1-ca094f9811e5",
+    "name": "CarePoint CAPQ - Clinic Appointment and Patient Queue REST API",
+    "description": "Comprehensive REST API collection for CarePoint Clinic Appointment & Patient Queue (CAPQ) System.\n\n### Tech Stack\n- Backend: Native PHP (PHP 7.4 / 8.x)\n- Database: MySQL 8.0 / MariaDB with automatic demo-mode fallback\n- Protocol: RESTful JSON over HTTP\n\n### Included Modules\n1. Appointments Management (Booking, Reference Tracking, List)\n2. Queue Management (Walk-in Issue, Live State, Doctor Call, Finish Consultation, Skip)\n3. Doctors Directory (Doctor profiles, Specialties, Queue load)\n4. Analytics & KPIs (Dashboard metrics, Wait times, Department load)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost/CAPQ/api",
+      "type": "string"
+    },
+    {
+      "key": "sampleRefCode",
+      "value": "CP-8921",
+      "type": "string"
+    },
+    {
+      "key": "sampleDoctorId",
+      "value": "1",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Appointments Module",
+      "description": "Endpoints for patient self-service appointment scheduling and tracking.",
+      "item": [
+        {
+          "name": "Create Appointment (Online Booking)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"Maria Clara Santos\",\n  \"dob\": \"1995-04-18\",\n  \"gender\": \"Female\",\n  \"phone\": \"0917-882-9912\",\n  \"email\": \"mariaclara@example.com\",\n  \"department_id\": 1,\n  \"doctor_id\": 1,\n  \"appointment_date\": \"2026-11-15\",\n  \"time_slot\": \"09:00 AM\",\n  \"reason_for_visit\": \"Persistent seasonal allergy symptoms and sinus headache for one week.\",\n  \"is_priority\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/appointments.php",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "appointments.php"
+              ]
+            },
+            "description": "Creates a new appointment booking record for a patient, auto-generates a unique tracking reference code (e.g. CP-8921), and prepares a queued ticket slot."
+          },
+          "response": [
+            {
+              "name": "201 Created - Appointment Successfully Booked",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"full_name\": \"Maria Clara Santos\",\n  \"dob\": \"1995-04-18\",\n  \"gender\": \"Female\",\n  \"phone\": \"0917-882-9912\",\n  \"email\": \"mariaclara@example.com\",\n  \"department_id\": 1,\n  \"doctor_id\": 1,\n  \"appointment_date\": \"2026-11-15\",\n  \"time_slot\": \"09:00 AM\",\n  \"reason_for_visit\": \"Persistent seasonal allergy symptoms and sinus headache.\",\n  \"is_priority\": false\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/appointments.php",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["appointments.php"]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=UTF-8"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Appointment booked successfully!\",\n  \"data\": {\n    \"appointment_id\": 109,\n    \"reference_code\": \"CP-8921\",\n    \"ticket_number\": \"A-108\",\n    \"patient_name\": \"Maria Clara Santos\",\n    \"appointment_date\": \"2026-11-15\",\n    \"time_slot\": \"09:00 AM\",\n    \"doctor_id\": 1,\n    \"room_number\": \"Room 03\",\n    \"status\": \"CONFIRMED\",\n    \"created_at\": \"2026-11-12T14:00:00+08:00\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Track Appointment by Reference Code",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/appointments.php?ref={{sampleRefCode}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "appointments.php"
+              ],
+              "query": [
+                {
+                  "key": "ref",
+                  "value": "{{sampleRefCode}}",
+                  "description": "Unique Appointment Reference Code (e.g., CP-8921)"
+                }
+              ]
+            },
+            "description": "Retrieves the current booking details, assigned doctor, consultation room, and real-time status of an appointment using its reference code."
+          },
+          "response": [
+            {
+              "name": "200 OK - Appointment Found",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/appointments.php?ref=CP-8921",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["appointments.php"],
+                  "query": [{"key": "ref", "value": "CP-8921"}]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=UTF-8"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Appointment record found.\",\n  \"data\": {\n    \"reference_code\": \"CP-8921\",\n    \"patient_name\": \"Maria Clara Santos\",\n    \"doctor_name\": \"Dr. Sarah Santos, MD\",\n    \"specialty\": \"Internal & General Medicine\",\n    \"room_number\": \"Room 03\",\n    \"appointment_date\": \"2026-11-15\",\n    \"time_slot\": \"09:00 AM\",\n    \"status\": \"CONFIRMED\",\n    \"ticket_number\": \"A-108\",\n    \"estimated_wait_time\": \"15 mins\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "List All Appointments",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/appointments.php?doctor_id=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "appointments.php"
+              ],
+              "query": [
+                {
+                  "key": "doctor_id",
+                  "value": "1",
+                  "description": "Optional filter by doctor ID"
+                }
+              ]
+            },
+            "description": "Returns a list of appointments for clinic staff and administration."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. Queue Management Module",
+      "description": "Live queue boards, ticket issuing, doctor calling, vitals recording, and skipping.",
+      "item": [
+        {
+          "name": "Get Live Queue Board State",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/queues.php",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "queues.php"
+              ]
+            },
+            "description": "Powers the TV Display board and Doctor Console. Returns 'now_calling' patient, upcoming queue list, and multi-room statuses."
+          },
+          "response": [
+            {
+              "name": "200 OK - Live Queue Retrieved",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/queues.php",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["queues.php"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=UTF-8"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Live queue state retrieved.\",\n  \"data\": {\n    \"now_calling\": {\n      \"ticket_number\": \"A-102\",\n      \"patient_name\": \"Juan Carlos Dela Cruz\",\n      \"gender\": \"Male\",\n      \"phone_number\": \"0917-555-0192\",\n      \"room_number\": \"Room 03\",\n      \"doctor_name\": \"Dr. Sarah Santos, MD\",\n      \"status\": \"IN_CONSULTATION\",\n      \"bp\": \"120/80\",\n      \"temp\": \"36.8\",\n      \"pulse\": \"76\",\n      \"spo2\": \"99\",\n      \"diagnosis\": \"J06.9 - Acute Upper Respiratory Infection (Mild)\"\n    },\n    \"waiting_count\": 4,\n    \"upcoming_queue\": [\n      {\n        \"ticket_number\": \"A-103\",\n        \"patient_name\": \"Beatriz Mendoza\",\n        \"queue_type\": \"Appointment\",\n        \"is_priority\": 0,\n        \"room_number\": \"Room 03\"\n      },\n      {\n        \"ticket_number\": \"P-012\",\n        \"patient_name\": \"Rosa Flores\",\n        \"queue_type\": \"Walk-in\",\n        \"is_priority\": 1,\n        \"room_number\": \"Room 03\"\n      }\n    ],\n    \"rooms\": [\n      {\"room\": \"01\", \"name\": \"Triage & Vital Signs\", \"ticket\": \"T-089\"},\n      {\"room\": \"02\", \"name\": \"Pediatrics Clinic\", \"ticket\": \"P-045\"},\n      {\"room\": \"03\", \"name\": \"General Medicine\", \"ticket\": \"A-102\"},\n      {\"room\": \"04\", \"name\": \"Dental & Oral Care\", \"ticket\": \"D-018\"},\n      {\"room\": \"05\", \"name\": \"Pharmacy & Billing\", \"ticket\": \"B-201\"}\n    ]\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Issue Walk-in Ticket / Kiosk Check-In",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"Rogelio Bautista\",\n  \"gender\": \"Male\",\n  \"phone\": \"0921-998-3344\",\n  \"department_id\": 1,\n  \"doctor_id\": 1,\n  \"room_number\": \"Room 03\",\n  \"is_priority\": true,\n  \"priority_category\": \"Senior Citizen\",\n  \"queue_type\": \"Walk-in\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/queues.php",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "queues.php"
+              ]
+            },
+            "description": "Triggered by the Self-Service Kiosk or Admin intake. Issues a sequential ticket (e.g., P-015 for priority or W-105 for regular) and adds the patient to the active waiting queue."
+          },
+          "response": [
+            {
+              "name": "201 Created - Ticket Issued",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"full_name\": \"Rogelio Bautista\",\n  \"gender\": \"Male\",\n  \"phone\": \"0921-998-3344\",\n  \"department_id\": 1,\n  \"doctor_id\": 1,\n  \"is_priority\": true,\n  \"queue_type\": \"Walk-in\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/queues.php",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["queues.php"]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"success\": true,\n  \"message\": \"Queue ticket generated successfully!\",\n  \"data\": {\n    \"ticket_number\": \"P-015\",\n    \"patient_name\": \"Rogelio Bautista\",\n    \"room_number\": \"Room 03\",\n    \"is_priority\": true,\n    \"priority_category\": \"Senior Citizen\",\n    \"estimated_wait_time\": \"10 mins\",\n    \"issued_at\": \"2026-11-12T14:10:00+08:00\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Call Patient (Doctor Console)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ticket_number\": \"A-103\",\n  \"room_number\": \"Room 03\",\n  \"doctor_id\": 1,\n  \"doctor_name\": \"Dr. Sarah Santos, MD\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/queues.php",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "queues.php"
+              ]
+            },
+            "description": "Doctor clicks 'Call Next' or 'Call Ticket'. Sets patient status to CALLING / IN_CONSULTATION and updates the TV screen with audio chime broadcast."
+          },
+          "response": [
+            {
+              "name": "200 OK - Patient Called",
+              "originalRequest": {
+                "method": "PUT",
+                "url": {
+                  "raw": "{{baseUrl}}/queues.php",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["queues.php"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"success\": true,\n  \"message\": \"Ticket A-103 called to Room 03!\",\n  \"data\": {\n    \"ticket_number\": \"A-103\",\n    \"status\": \"CALLED\",\n    \"room_number\": \"Room 03\",\n    \"called_at\": \"2026-11-12T14:15:00+08:00\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Complete Consultation & Save EHR Vitals",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ticket_number\": \"A-102\",\n  \"action\": \"complete\",\n  \"bp\": \"118/78\",\n  \"temp\": \"36.7\",\n  \"pulse\": \"74\",\n  \"spo2\": \"99\",\n  \"weight\": \"67.5\",\n  \"diagnosis\": \"Acute Upper Respiratory Tract Infection, Resolved\",\n  \"prescription\": \"Continue hydration; take Paracetamol 500mg PRN for headache.\",\n  \"doctor_notes\": \"Patient is cleared for regular work duty.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/queues.php",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "queues.php"
+              ]
+            },
+            "description": "Doctor finishes examination, saves vitals to EHR records, marks queue item as COMPLETED, and releases room for the next patient."
+          },
+          "response": [
+            {
+              "name": "200 OK - Consultation Completed",
+              "originalRequest": {
+                "method": "PATCH",
+                "url": {
+                  "raw": "{{baseUrl}}/queues.php",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["queues.php"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"success\": true,\n  \"message\": \"Consultation for ticket A-102 successfully completed and archived.\",\n  \"data\": {\n    \"ticket_number\": \"A-102\",\n    \"status\": \"COMPLETED\",\n    \"completed_at\": \"2026-11-12T14:30:00+08:00\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Skip Patient / Mark No-Show",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ticket_number\": \"A-104\",\n  \"action\": \"skip\",\n  \"reason\": \"Patient did not respond after 3 chimes\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/queues.php?action=skip",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "queues.php"
+              ],
+              "query": [
+                {
+                  "key": "action",
+                  "value": "skip"
+                }
+              ]
+            },
+            "description": "Marks patient as SKIPPED / NO_SHOW when patient is called but does not report to the clinic room."
+          },
+          "response": [
+            {
+              "name": "200 OK - Patient Skipped",
+              "originalRequest": {
+                "method": "PATCH",
+                "url": {
+                  "raw": "{{baseUrl}}/queues.php?action=skip",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["queues.php"],
+                  "query": [{"key": "action", "value": "skip"}]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"success\": true,\n  \"message\": \"Ticket A-104 marked as SKIPPED.\",\n  \"data\": {\n    \"ticket_number\": \"A-104\",\n    \"status\": \"SKIPPED\"\n  }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Doctors Directory Module",
+      "description": "Endpoints to query active physicians, room locations, and their live queue lengths.",
+      "item": [
+        {
+          "name": "List Active Doctors & Queue Load",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/doctors.php",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "doctors.php"
+              ]
+            },
+            "description": "Fetches all doctors with assigned room numbers, specialties, and the number of waiting patients."
+          },
+          "response": [
+            {
+              "name": "200 OK - Active Doctors List",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/doctors.php",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["doctors.php"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"success\": true,\n  \"message\": \"Doctors directory retrieved.\",\n  \"data\": {\n    \"count\": 4,\n    \"doctors\": [\n      {\n        \"id\": 1,\n        \"full_name\": \"Dr. Sarah Santos\",\n        \"title\": \"MD\",\n        \"specialty\": \"Internal & General Medicine\",\n        \"room_number\": \"Room 03\",\n        \"department_name\": \"General Medicine\",\n        \"waiting_count\": 5,\n        \"is_active\": 1\n      },\n      {\n        \"id\": 2,\n        \"full_name\": \"Dr. Raymond Cruz\",\n        \"title\": \"MD\",\n        \"specialty\": \"Family Medicine\",\n        \"room_number\": \"Room 01\",\n        \"department_name\": \"General Medicine\",\n        \"waiting_count\": 1,\n        \"is_active\": 1\n      }\n    ]\n  }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4. Analytics & KPIs Module",
+      "description": "Real-time statistics for operations dashboard and clinical oversight.",
+      "item": [
+        {
+          "name": "Get Clinic Operations KPIs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/stats.php",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "stats.php"
+              ]
+            },
+            "description": "Returns operational statistics: total patients registered, waiting count, active consultations, completed cases, and average wait duration."
+          },
+          "response": [
+            {
+              "name": "200 OK - KPI Metrics Retrieved",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/stats.php",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["stats.php"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"success\": true,\n  \"message\": \"Dashboard stats computed.\",\n  \"data\": {\n    \"total_registered_today\": 54,\n    \"currently_waiting\": 5,\n    \"in_consultation\": 3,\n    \"completed_today\": 38,\n    \"priority_patients\": 4,\n    \"avg_wait_minutes\": 15,\n    \"satisfaction_percentage\": 98.4,\n    \"system_status\": \"HEALTHY\"\n  }\n}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

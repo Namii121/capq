@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CarePoint CAPQ - REST API Interactive Documentation</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #0f172a; color: #f8fafc; }
+    code, pre { font-family: 'JetBrains Mono', monospace; }
+    .method-get { background: #0284c7; color: white; }
+    .method-post { background: #16a34a; color: white; }
+    .method-put { background: #ea580c; color: white; }
+    .method-patch { background: #9333ea; color: white; }
+    .method-delete { background: #dc2626; color: white; }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #1e293b; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased selection:bg-teal-500 selection:text-white">
+
+  <!-- Top Navigation Bar -->
+  <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-teal-500 to-emerald-400 flex items-center justify-center text-white shadow-lg shadow-teal-500/20 font-bold text-xl">
+          <i class="fa-solid fa-code"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="font-bold text-lg text-white">CarePoint CAPQ</h1>
+            <span class="px-2 py-0.5 text-xs font-semibold rounded bg-teal-500/20 text-teal-400 border border-teal-500/30">v1.0 REST API</span>
+          </div>
+          <p class="text-xs text-slate-400">Clinic Appointment & Patient Queue Backend</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <a href="CAPQ_Postman_Collection.json" download="CAPQ_Postman_Collection.json" class="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-orange-600 hover:bg-orange-500 text-white font-medium text-xs shadow-md shadow-orange-600/30 transition">
+          <i class="fa-solid fa-download"></i>
+          <span>Export Postman v2.1 JSON</span>
+        </a>
+        <a href="index.php" class="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 transition">
+          <i class="fa-solid fa-arrow-left mr-1.5"></i> Back to App
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Documentation Layout -->
+  <div class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
+    
+    <!-- Sidebar / Table of Contents -->
+    <aside class="lg:col-span-3 space-y-6">
+      <div class="bg-slate-900 rounded-xl border border-slate-800 p-4 sticky top-24">
+        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2">
+          <i class="fa-solid fa-list-check text-teal-400"></i> API Endpoints
+        </h3>
+        
+        <nav class="space-y-1 text-sm">
+          <a href="#appointments-section" class="flex items-center justify-between px-2.5 py-1.5 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white font-medium transition">
+            <span>Appointments</span>
+            <span class="text-xs text-slate-500">3 routes</span>
+          </a>
+          <a href="#queues-section" class="flex items-center justify-between px-2.5 py-1.5 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white font-medium transition">
+            <span>Queue & Kiosk</span>
+            <span class="text-xs text-slate-500">5 routes</span>
+          </a>
+          <a href="#doctors-section" class="flex items-center justify-between px-2.5 py-1.5 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white font-medium transition">
+            <span>Doctors Directory</span>
+            <span class="text-xs text-slate-500">1 route</span>
+          </a>
+          <a href="#stats-section" class="flex items-center justify-between px-2.5 py-1.5 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white font-medium transition">
+            <span>Analytics & KPIs</span>
+            <span class="text-xs text-slate-500">1 route</span>
+          </a>
+        </nav>
+
+        <hr class="border-slate-800 my-4">
+
+        <div class="p-3 rounded-lg bg-slate-800/60 border border-slate-700/50 space-y-2">
+          <div class="text-xs font-medium text-slate-400">Base URL:</div>
+          <div class="font-mono text-xs text-teal-300 bg-slate-900 px-2 py-1 rounded border border-slate-800 break-all select-all">
+            http://localhost/CAPQ/api
+          </div>
+          <div class="text-[11px] text-slate-400 leading-tight">
+            CORS enabled. Accepts <code class="text-teal-400">application/json</code> and returns structured responses.
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area with Live Runners -->
+    <main class="lg:col-span-9 space-y-8">
+
+      <!-- Section: Overview -->
+      <section class="bg-gradient-to-r from-slate-900 to-slate-800/80 rounded-2xl border border-slate-800 p-6 shadow-xl">
+        <h2 class="text-xl font-bold text-white mb-2">REST API Architecture & Test Runner</h2>
+        <p class="text-slate-300 text-sm leading-relaxed mb-4">
+          This interactive API console connects directly to the native PHP and MySQL backend routes in <code class="text-teal-400 bg-slate-900 px-1.5 py-0.5 rounded">/api/</code>. 
+          Use the <strong class="text-white">Send Request</strong> buttons below to test live HTTP queries and inspect full JSON response bodies.
+        </p>
+        <div class="flex flex-wrap gap-2 text-xs">
+          <span class="px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 border border-slate-700">PHP 7.4 / 8.x Compatible</span>
+          <span class="px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 border border-slate-700">MySQL 8.0 / MariaDB PDO</span>
+          <span class="px-2.5 py-1 rounded-full bg-emerald-900/40 text-emerald-300 border border-emerald-700/40">Zero External Dependencies</span>
+          <span class="px-2.5 py-1 rounded-full bg-blue-900/40 text-blue-300 border border-blue-700/40">Full CRUD Support</span>
+        </div>
+      </section>
+
+      <!-- Section: Appointments -->
+      <section id="appointments-section" class="space-y-6">
+        <div class="flex items-center gap-2 border-b border-slate-800 pb-3">
+          <h2 class="text-lg font-bold text-white">1. Appointments Endpoints</h2>
+          <span class="text-xs text-slate-400">(Booking, Tracking & Retrieval)</span>
+        </div>
+
+        <!-- Endpoint: POST /appointments.php -->
+        <div class="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden shadow-lg" id="card-post-appointments">
+          <div class="p-4 bg-slate-850 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-2.5">
+              <span class="method-post px-2.5 py-0.5 rounded text-xs font-bold uppercase">POST</span>
+              <span class="font-mono text-sm font-semibold text-slate-200">/api/appointments.php</span>
+            </div>
+            <span class="text-xs text-slate-400">Create Patient Appointment & Queue Slot</span>
+          </div>
+          <div class="p-5 space-y-4">
+            <p class="text-xs text-slate-300">Creates a new patient booking record, saves demographic details, and issues a tracking reference code.</p>
+            <div>
+              <div class="text-xs font-semibold text-slate-400 mb-1">Request Payload (JSON):</div>
+              <textarea id="body-post-appointment" class="w-full bg-slate-950 font-mono text-xs text-slate-300 p-3 rounded-lg border border-slate-800 focus:outline-none focus:border-teal-500 h-32" spellcheck="false">{
+  "full_name": "Maria Clara Santos",
+  "dob": "1995-04-18",
+  "gender": "Female",
+  "phone": "0917-882-9912",
+  "email": "mariaclara@example.com",
+  "department_id": 1,
+  "doctor_id": 1,
+  "appointment_date": "2026-11-15",
+  "time_slot": "09:00 AM",
+  "reason_for_visit": "Persistent allergy symptoms and sinus headache."
+}</textarea>
+            </div>
+            <div class="flex items-center justify-between pt-1">
+              <button onclick="runApiTest('POST', 'appointments.php', 'body-post-appointment', 'res-post-appointment')" class="px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white rounded-lg text-xs font-bold flex items-center gap-2 transition">
+                <i class="fa-solid fa-paper-plane"></i> Send Request
+              </button>
+              <span id="badge-post-appointment" class="text-xs font-mono text-slate-500">Ready</span>
+            </div>
+            <div class="space-y-1">
+              <div class="text-xs font-semibold text-slate-400">Response:</div>
+              <pre id="res-post-appointment" class="bg-slate-950 text-slate-400 font-mono text-xs p-3 rounded-lg border border-slate-800 overflow-x-auto max-h-48">// Click "Send Request" to test...</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Endpoint: GET /appointments.php?ref=CP-XXXX -->
+        <div class="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden shadow-lg">
+          <div class="p-4 bg-slate-850 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-2.5">
+              <span class="method-get px-2.5 py-0.5 rounded text-xs font-bold uppercase">GET</span>
+              <span class="font-mono text-sm font-semibold text-slate-200">/api/appointments.php?ref={reference_code}</span>
+            </div>
+            <span class="text-xs text-slate-400">Track Appointment Status</span>
+          </div>
+          <div class="p-5 space-y-4">
+            <div class="flex items-center gap-3">
+              <label class="text-xs font-semibold text-slate-400 whitespace-nowrap">Reference Code:</label>
+              <input type="text" id="input-track-ref" value="CP-8921" class="bg-slate-950 font-mono text-xs text-white px-3 py-1.5 rounded-lg border border-slate-800 focus:outline-none focus:border-teal-500 w-44">
+            </div>
+            <div class="flex items-center justify-between pt-1">
+              <button onclick="runApiTest('GET', 'appointments.php?ref=' + document.getElementById('input-track-ref').value, null, 'res-track-appointment')" class="px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white rounded-lg text-xs font-bold flex items-center gap-2 transition">
+                <i class="fa-solid fa-magnifying-glass"></i> Track Appointment
+              </button>
+              <span id="badge-track-appointment" class="text-xs font-mono text-slate-500">Ready</span>
+            </div>
+            <div class="space-y-1">
+              <div class="text-xs font-semibold text-slate-400">Response:</div>
+              <pre id="res-track-appointment" class="bg-slate-950 text-slate-400 font-mono text-xs p-3 rounded-lg border border-slate-800 overflow-x-auto max-h-48">// Click "Track Appointment" to test...</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: Queue & Kiosk -->
+      <section id="queues-section" class="space-y-6">
+        <div class="flex items-center gap-2 border-b border-slate-800 pb-3">
+          <h2 class="text-lg font-bold text-white">2. Queue Management Endpoints</h2>
+          <span class="text-xs text-slate-400">(Live Board, Walk-in Tickets, Doctor Actions)</span>
+        </div>
+
+        <!-- Endpoint: GET /queues.php -->
+        <div class="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden shadow-lg">
+          <div class="p-4 bg-slate-850 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-2.5">
+              <span class="method-get px-2.5 py-0.5 rounded text-xs font-bold uppercase">GET</span>
+              <span class="font-mono text-sm font-semibold text-slate-200">/api/queues.php</span>
+            </div>
+            <span class="text-xs text-slate-400">Get Live TV Display Queue State</span>
+          </div>
+          <div class="p-5 space-y-4">
+            <p class="text-xs text-slate-300">Supplies the full live queue state for the large display screen and doctor consoles.</p>
+            <div class="flex items-center justify-between pt-1">
+              <button onclick="runApiTest('GET', 'queues.php', null, 'res-get-queues')" class="px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white rounded-lg text-xs font-bold flex items-center gap-2 transition">
+                <i class="fa-solid fa-tv"></i> Fetch Queue State
+              </button>
+              <span id="badge-get-queues" class="text-xs font-mono text-slate-500">Ready</span>
+            </div>
+            <div class="space-y-1">
+              <div class="text-xs font-semibold text-slate-400">Response:</div>
+              <pre id="res-get-queues" class="bg-slate-950 text-slate-400 font-mono text-xs p-3 rounded-lg border border-slate-800 overflow-x-auto max-h-48">// Click "Fetch Queue State" to test...</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Endpoint: POST /queues.php (Issue Walk-In Ticket) -->
+        <div class="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden shadow-lg">
+          <div class="p-4 bg-slate-850 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-2.5">
+              <span class="method-post px-2.5 py-0.5 rounded text-xs font-bold uppercase">POST</span>
+              <span class="font-mono text-sm font-semibold text-slate-200">/api/queues.php</span>
+            </div>
+            <span class="text-xs text-slate-400">Issue Walk-in Ticket / Check-In</span>
+          </div>
+          <div class="p-5 space-y-4">
+            <div>
+              <div class="text-xs font-semibold text-slate-400 mb-1">Request Payload (JSON):</div>
+              <textarea id="body-issue-ticket" class="w-full bg-slate-950 font-mono text-xs text-slate-300 p-3 rounded-lg border border-slate-800 focus:outline-none focus:border-teal-500 h-28" spellcheck="false">{
+  "full_name": "Rogelio Bautista",
+  "gender": "Male",
+  "phone": "0921-998-3344",
+  "department_id": 1,
+  "doctor_id": 1,
+  "is_priority": true,
+  "priority_category": "Senior Citizen",
+  "queue_type": "Walk-in"
+}</textarea>
+            </div>
+            <div class="flex items-center justify-between pt-1">
+              <button onclick="runApiTest('POST', 'queues.php', 'body-issue-ticket', 'res-issue-ticket')" class="px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white rounded-lg text-xs font-bold flex items-center gap-2 transition">
+                <i class="fa-solid fa-ticket"></i> Issue Ticket
+              </button>
+              <span id="badge-issue-ticket" class="text-xs font-mono text-slate-500">Ready</span>
+            </div>
+            <div class="space-y-1">
+              <div class="text-xs font-semibold text-slate-400">Response:</div>
+              <pre id="res-issue-ticket" class="bg-slate-950 text-slate-400 font-mono text-xs p-3 rounded-lg border border-slate-800 overflow-x-auto max-h-48">// Click "Issue Ticket" to test...</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Endpoint: PUT /queues.php (Doctor Call Patient) -->
+        <div class="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden shadow-lg">
+          <div class="p-4 bg-slate-850 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-2.5">
+              <span class="method-put px-2.5 py-0.5 rounded text-xs font-bold uppercase">PUT</span>
+              <span class="font-mono text-sm font-semibold text-slate-200">/api/queues.php</span>
+            </div>
+            <span class="text-xs text-slate-400">Call Patient into Consultation Room</span>
+          </div>
+          <div class="p-5 space-y-4">
+            <div>
+              <div class="text-xs font-semibold text-slate-400 mb-1">Request Payload (JSON):</div>
+              <textarea id="body-call-patient" class="w-full bg-slate-950 font-mono text-xs text-slate-300 p-3 rounded-lg border border-slate-800 focus:outline-none focus:border-teal-500 h-24" spellcheck="false">{
+  "ticket_number": "A-103",
+  "room_number": "Room 03",
+  "doctor_id": 1,
+  "doctor_name": "Dr. Sarah Santos, MD"
+}</textarea>
+            </div>
+            <div class="flex items-center justify-between pt-1">
+              <button onclick="runApiTest('PUT', 'queues.php', 'body-call-patient', 'res-call-patient')" class="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded-lg text-xs font-bold flex items-center gap-2 transition">
+                <i class="fa-solid fa-bullhorn"></i> Call Patient
+              </button>
+              <span id="badge-call-patient" class="text-xs font-mono text-slate-500">Ready</span>
+            </div>
+            <div class="space-y-1">
+              <div class="text-xs font-semibold text-slate-400">Response:</div>
+              <pre id="res-call-patient" class="bg-slate-950 text-slate-400 font-mono text-xs p-3 rounded-lg border border-slate-800 overflow-x-auto max-h-48">// Click "Call Patient" to test...</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Endpoint: PATCH /queues.php (Complete Consultation) -->
+        <div class="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden shadow-lg">
+          <div class="p-4 bg-slate-850 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-2.5">
+              <span class="method-patch px-2.5 py-0.5 rounded text-xs font-bold uppercase">PATCH</span>
+              <span class="font-mono text-sm font-semibold text-slate-200">/api/queues.php</span>
+            </div>
+            <span class="text-xs text-slate-400">Complete Consultation & Save Vitals</span>
+          </div>
+          <div class="p-5 space-y-4">
+            <div>
+              <div class="text-xs font-semibold text-slate-400 mb-1">Request Payload (JSON):</div>
+              <textarea id="body-complete-queue" class="w-full bg-slate-950 font-mono text-xs text-slate-300 p-3 rounded-lg border border-slate-800 focus:outline-none focus:border-teal-500 h-28" spellcheck="false">{
+  "ticket_number": "A-102",
+  "action": "complete",
+  "bp": "118/78",
+  "temp": "36.7",
+  "pulse": "74",
+  "spo2": "99",
+  "diagnosis": "Acute Upper Respiratory Tract Infection, Resolved",
+  "prescription": "Cetirizine 10mg once daily; Paracetamol PRN."
+}</textarea>
+            </div>
+            <div class="flex items-center justify-between pt-1">
+              <button onclick="runApiTest('PATCH', 'queues.php', 'body-complete-queue', 'res-complete-queue')" class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-xs font-bold flex items-center gap-2 transition">
+                <i class="fa-solid fa-clipboard-check"></i> Finish Consultation
+              </button>
+              <span id="badge-complete-queue" class="text-xs font-mono text-slate-500">Ready</span>
+            </div>
+            <div class="space-y-1">
+              <div class="text-xs font-semibold text-slate-400">Response:</div>
+              <pre id="res-complete-queue" class="bg-slate-950 text-slate-400 font-mono text-xs p-3 rounded-lg border border-slate-800 overflow-x-auto max-h-48">// Click "Finish Consultation" to test...</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: Doctors Directory & Analytics -->
+      <section id="doctors-section" class="space-y-6">
+        <div class="flex items-center gap-2 border-b border-slate-800 pb-3">
+          <h2 class="text-lg font-bold text-white">3. Doctors Directory & Stats</h2>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Doctor Directory -->
+          <div class="bg-slate-900 rounded-xl border border-slate-800 p-5 space-y-4">
+            <div class="flex items-center justify-between">
+              <span class="method-get px-2.5 py-0.5 rounded text-xs font-bold uppercase">GET</span>
+              <span class="font-mono text-xs text-slate-300">/api/doctors.php</span>
+            </div>
+            <p class="text-xs text-slate-400">Query all practicing physicians, rooms, and active queue counts.</p>
+            <div class="flex items-center justify-between pt-1">
+              <button onclick="runApiTest('GET', 'doctors.php', null, 'res-doctors')" class="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-teal-300 border border-teal-500/30 rounded-lg text-xs font-semibold transition">
+                <i class="fa-solid fa-user-doctor mr-1"></i> Query Doctors
+              </button>
+              <span id="badge-doctors" class="text-xs font-mono text-slate-500">Ready</span>
+            </div>
+            <pre id="res-doctors" class="bg-slate-950 text-slate-400 font-mono text-xs p-3 rounded-lg border border-slate-800 overflow-x-auto max-h-40">// Output...</pre>
+          </div>
+
+          <!-- Stats & Analytics -->
+          <div class="bg-slate-900 rounded-xl border border-slate-800 p-5 space-y-4" id="stats-section">
+            <div class="flex items-center justify-between">
+              <span class="method-get px-2.5 py-0.5 rounded text-xs font-bold uppercase">GET</span>
+              <span class="font-mono text-xs text-slate-300">/api/stats.php</span>
+            </div>
+            <p class="text-xs text-slate-400">Query operations KPIs, wait times, and total patient throughput.</p>
+            <div class="flex items-center justify-between pt-1">
+              <button onclick="runApiTest('GET', 'stats.php', null, 'res-stats')" class="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-emerald-300 border border-emerald-500/30 rounded-lg text-xs font-semibold transition">
+                <i class="fa-solid fa-chart-line mr-1"></i> Query Stats
+              </button>
+              <span id="badge-stats" class="text-xs font-mono text-slate-500">Ready</span>
+            </div>
+            <pre id="res-stats" class="bg-slate-950 text-slate-400 font-mono text-xs p-3 rounded-lg border border-slate-800 overflow-x-auto max-h-40">// Output...</pre>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script>
+    async function runApiTest(method, endpoint, bodyElementId, resultElementId) {
+      const resultEl = document.getElementById(resultElementId);
+      const badgeId = 'badge-' + resultElementId.replace('res-', '');
+      const badgeEl = document.getElementById(badgeId);
+
+      const targetUrl = 'api/' + endpoint;
+
+      if (badgeEl) {
+        badgeEl.textContent = 'Sending...';
+        badgeEl.className = 'text-xs font-mono text-amber-400 animate-pulse';
+      }
+      resultEl.textContent = 'Connecting to ' + targetUrl + '...';
+
+      const startTime = performance.now();
+      try {
+        const options = {
+          method: method,
+          headers: {
+            'Accept': 'application/json'
+          }
+        };
+
+        if (bodyElementId && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
+          const bodyVal = document.getElementById(bodyElementId).value;
+          options.headers['Content-Type'] = 'application/json';
+          options.body = bodyVal;
+        }
+
+        const res = await fetch(targetUrl, options);
+        const duration = Math.round(performance.now() - startTime);
+        const json = await res.json();
+
+        resultEl.textContent = JSON.stringify(json, null, 2);
+        resultEl.className = 'bg-slate-950 text-teal-300 font-mono text-xs p-3 rounded-lg border border-teal-900/50 overflow-x-auto max-h-48';
+
+        if (badgeEl) {
+          badgeEl.textContent = `${res.status} ${res.statusText} (${duration}ms)`;
+          badgeEl.className = res.ok ? 'text-xs font-mono text-emerald-400 font-bold' : 'text-xs font-mono text-rose-400 font-bold';
+        }
+      } catch (err) {
+        const duration = Math.round(performance.now() - startTime);
+        resultEl.textContent = 'Error: ' + err.message;
+        resultEl.className = 'bg-slate-950 text-rose-400 font-mono text-xs p-3 rounded-lg border border-rose-900/50 overflow-x-auto max-h-48';
+        if (badgeEl) {
+          badgeEl.textContent = `FAILED (${duration}ms)`;
+          badgeEl.className = 'text-xs font-mono text-rose-400 font-bold';
+        }
+      }
+    }
+  </script>
+</body>
+</html>
