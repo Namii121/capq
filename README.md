@@ -151,8 +151,8 @@ Open `http://localhost/CAPQ/docs.html` in your browser. You can click **"Send Re
 As mandated by the course evaluation rubric, a complete software testing and verification suite has been executed with a **100% Pass Rate**:
 
 - **Documented Test Plan & Scope:** Objectives, test environments, hardware/software specifications, entry/exit criteria.
-- **12 Functional Test Cases (FTC-01 to FTC-12):** Validating booking, validation errors, tracking, kiosk tickets, priority rules, doctor calling, chime emission, and vitals recording.
-- **6 Integration Test Cases (ITC-01 to ITC-06):** Validating end-to-end data pipeline from online booking &rarr; kiosk &rarr; TV display &rarr; doctor consultation &rarr; analytics.
+- **30 Functional Test Cases (FTC-01 to FTC-30):** Full 30-case verification suite validating booking, validation errors, date restrictions, doctor filtering, tracking, kiosk tickets, priority rules, touch keypad, doctor calling, audio chime synthesis, EHR vitals recording, boundary checks, skip handling, TV multi-room sync, marquee broadcasts, and admin controls.
+- **6 Integration Test Cases (ITC-01 to ITC-06):** Validating end-to-end data pipeline from online booking &rarr; kiosk &rarr; TV display &rarr; doctor consultation &rarr; analytics (total 36 test cases).
 - **4 User Acceptance Testing (UAT) Scripts:** Real-world persona validation for Patient, Senior Walk-in, Physician, and Head Nurse.
 - **6 Initial Bug Tracking Logs (BUG-01 to BUG-06):** Complete records of defects encountered, root cause analyses, solutions implemented, and verification results.
 
